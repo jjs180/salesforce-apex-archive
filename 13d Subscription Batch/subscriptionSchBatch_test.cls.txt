@@ -1,0 +1,33 @@
+@istest
+public class subscriptionSchBatch_test{
+    //Test method to test scenarios to populate related account
+    static testMethod void  testSubscriptionContact(){
+        Account accRecord = TestData_Utility.createAccount();
+        insert accRecord;
+        system.assertNotEquals(accRecord.Id,null);
+        
+        contact conRecord = TestData_Utility.createContact(accRecord.Id);
+        conRecord.Subscription_Start__c = date.today()+2;
+        conRecord.Subscription_End__c = date.today();
+        insert conRecord;
+        system.assertNotEquals(conRecord.Id,null);
+        
+        contact conRecord1 = TestData_Utility.createContact(accRecord.Id);
+        conRecord1.Subscription_Start__c = date.today()-2;
+        conRecord1.Subscription_End__c = date.today()-1;
+        insert conRecord1;
+        system.assertNotEquals(conRecord1.Id,null);
+        
+        contact conRecord2 = TestData_Utility.createContact(accRecord.Id);
+        conRecord2.Subscription_Start__c = date.today();
+        conRecord2.Subscription_End__c = date.today();
+        insert conRecord2;
+        system.assertNotEquals(conRecord2.Id,null);
+        
+        test.startTest();
+            subscriptionBatch_Schedule subscriptionSchedule = new subscriptionBatch_Schedule();
+            String sch = '0 0 23 * * ?'; 
+            system.schedule('Test subscription', sch, subscriptionSchedule); 
+        test.stopTest();
+    }
+}

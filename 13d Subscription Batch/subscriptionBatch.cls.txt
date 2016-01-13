@@ -1,0 +1,49 @@
+global with sharing class subscriptionBatch implements Database.Batchable<SObject>{
+      public class subscriptionBatchException extends Exception{}
+     /**        
+    * Start method of batch
+    */ 
+    global Database.querylocator start(Database.BatchableContext BC){
+           /**
+            * Get list of all Contact records whose subscription dates are not blank 
+            */
+            return Database.getQueryLocator([ select Id,
+                                                     Subscription_Is2__c,
+                                                     Subscription_End__c,Subscription_Start__c                                                    
+                                              from Contact where Subscription_Start__c != null AND Subscription_End__c != null]);  
+        
+        
+    } 
+    
+    /**        
+    * Execute method of batch
+    */      
+    global void execute(Database.BatchableContext BC, List<Contact> lstContact){
+        try{
+            if(!lstContact.isEmpty()){
+                for(contact con : lstContact){
+                    if(date.today() < con.Subscription_Start__c){
+                        con.Subscription_Is2__c = 'Inactive';
+                    }
+                    if(date.today() > con.Subscription_End__c){
+                        con.Subscription_Is2__c = 'Expired';
+                    }
+                    if(date.today() >= con.Subscription_Start__c && date.today() <= con.Subscription_End__c){
+                        con.Subscription_Is2__c = 'Active';
+                    }
+                }
+                database.update(lstContact,false);
+            }    
+        }
+        catch(exception e){
+            throw new subscriptionBatchException(e.getMessage());
+        }       
+    }
+    
+    /**         
+    * Finish method of batch 
+    */  
+    global void finish(Database.BatchableContext BC){ 
+
+    }
+}

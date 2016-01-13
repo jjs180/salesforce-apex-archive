@@ -1,0 +1,12 @@
+global with sharing class subscriptionBatch_Schedule implements Schedulable {
+     /**        
+    * Execute method of Scehdule class
+    */     
+    global void execute(SchedulableContext SC){
+        //batch class to be scheduled
+        subscriptionBatch subBatch = new subscriptionBatch();
+        
+        //Parameters of ExecuteBatch(context,BatchSize)
+        database.executebatch(subBatch,200);
+    }
+}
