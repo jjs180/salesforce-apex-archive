@@ -19,7 +19,7 @@ public class MyChartsController
                 return DateFilterOption;
         }
          set; }
-    public COntact filterContact { get; set; }
+    public Contact filterContact { get; set; }
     public String TerritoryUser { get; set; }
     public String Manager {get;set;}
     public String Category {get;set;}

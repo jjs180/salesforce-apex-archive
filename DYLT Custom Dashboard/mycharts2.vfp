@@ -196,27 +196,7 @@
 <!--> Row 4  Top 5 Shipper, Top 5 Shipper Lost ST, TOp 5 Shipper Lost LT -->         
                 
                 
-               <apex:pageBlockSectionItem >
-                    <apex:outputPanel styleclass="chartGroup">
-                     
-                                               
-                        <div class="chartflow">
-                            <div class="chartSectionTitle">Top 5 Shippers</div>
-                            <c:Top5Shippers reportFilters="{!ReportFilter}"/>
-                        </div>
-                   <div class="chartflow">
-                            <div class="chartSectionTitle">Top 5 Shippers Lost ST</div>
-                            <c:Top5ShippersLostShortTerm reportFilters="{!ReportFilter}"/>
-                        </div>
-                      
-                           <div class="chartflow">
-                            <div class="chartSectionTitle">Top 5 Shippers Lost LT</div>
-                            <c:Top5ShippersLostLongTerm reportFilters="{!ReportFilter}"/>
-                        </div>
-                        
-                        <div class="clr"></div>
-                    </apex:outputPanel>                
-                </apex:pageBlockSectionItem>
+              
                      
                       
 <!--> Row 5 Biz by Lane-Consignee, Consignee Rev by State Table   -->
@@ -239,27 +219,7 @@
 
 <!--> Row 6  Top 5 Consignee, Top 5 Consignee Lost   -->
 
-                <apex:pageBlockSectionItem >
-                    <apex:outputPanel styleclass="chartGroup">
-                        
-                                               
-                        <div class="chartflow">
-                            <div class="chartSectionTitle">Top 5 Consignees</div>
-                            <c:Top5Consignees reportFilters="{!ReportFilter}"/>
-                        </div>
-                                               
-                         <!-->   <div class="chartflow">
-                        <div class="chartSectionTitle">Top 5 Consignees Lost ST</div>
-                            <c:top5consigneeslostshortterm reportFilters="{!ReportFilter}"/>
-                        </div>
-                                               
-                        <div class="chartflow">
-                            <div class="chartSectionTitle">Top 5 Consignees Lost LT</div>
-                            <c:top5consigneeslostlongterm reportFilters="{!ReportFilter}"/>
-                        </div>
-            -->      <div class="clr"></div>
-                    </apex:outputPanel>                
-                </apex:pageBlockSectionItem>                          
+                                      
            
 <!--> Row 7 On Time Shipments, Length Linehaul, Days in Transit  --> 
         
