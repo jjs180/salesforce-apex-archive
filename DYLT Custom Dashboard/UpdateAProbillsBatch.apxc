@@ -2,69 +2,119 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
 {   
     global database.Querylocator start(Database.BatchableContext context)
     {
-        return Database.getQueryLocator([select Id, Quota_Date__c, Working_Day__c, working_day_name__c, Shipper__c, Shipper_Address__c, Shipper_City__c, Shipper_Country__c, Shipper_ID__c, Shipper_Name__c, Shipper_State__c, Shipper_Zip__c, Consignee__c, Consignee_Address__c, Consignee_City__c, Consignee_Country__c, Consignee_ID__c, Consignee_Name__c, Consignee_State__c, Consignee_Zip__c, Commission_Summary__c, Delivery_Month__c, Supernova_Performance__c, AE_Rate_To__c, Delivery_Start__c, Account__c, Account__r.Name from Probill__c WHERE AE_Rate_To__c != null and Delivery_Start__c != null]); 
+        return Database.getQueryLocator([select Id, Quota_Date__c, Working_Day__c, Working_Day_Name__c, 
+                                         Shipper__c, Shipper_Address__c, Shipper_City__c, Shipper_Country__c, 
+                                         Shipper_ID__c, Shipper_Name__c, Shipper_State__c, Shipper_Zip__c, 
+                                         Consignee__c, Consignee_Address__c, Consignee_City__c, Consignee_Country__c, 
+                                         Consignee_ID__c, Consignee_Name__c, Consignee_State__c, Consignee_Zip__c, 
+                                         Commission_Summary__c, Commission_Name__c, Delivery_Month__c, 
+                                         Supernova_Performance__c, Supernova_Name__c, AE_Rate_To__c, Delivery_Start__c, 
+                                         Account__c, Account__r.Name 
+                                         FROM Probill__c 
+                                         WHERE AE_Rate_To__c != NULL AND Delivery_Start__c != NULL AND
+                                         (Working_Day__c = NULL OR Shipper__c = NULL OR Consignee__c = NULL
+                                          OR Commission_Summary__c = NULL OR Supernova_Performance__c = NULL)]); 
     }
     
     global void execute(Database.BatchableContext context, List<Probill__c> probills)
     {
-        for(sObject obj : probills)
+        Set<String> commissionNames = new Set<String>();
+        Set<String> workingDayNames = new Set<String>();
+        Set<String> supernovaNames = new Set<String>();
+        Set<String> ShipperConsigneeIDs = new Set<String>();
+        //Set<String> ConsigneeIDs = new Set<String>();
+        
+        for(Probill__c probill : probills)
         {
-            Probill__c probill = (Probill__c)obj;
-           
-            List<Commission__c> commissions = [select Id from Commission__c where AE_ID__r.TM_User_ID__c = :probill.AE_Rate_To__c and Report_Month__c =:probill.Delivery_Month__c  and Rate_To_Name__c = :probill.Account__r.Name limit 1];
-            if(commissions.size() > 0)
-            {
-                probill.Commission_Summary__c = commissions[0].Id;
+            //Probill__c probill = (Probill__c)obj;
+				           
+            if(probill.Commission_Summary__c == null && probill.Commission_Name__c != null){
+                commissionNames.add(probill.Commission_Name__c);
             }
-            List<Supernova__c> supernovas = [select Id from Supernova__c where AE_ID__r.TM_User_ID__c = :probill.AE_Rate_To__c and Report_Month__c =:probill.Delivery_Month__c limit 1];
-            if(supernovas.size() > 0)
-            {
-                probill.Supernova_Performance__c = supernovas[0].Id;
+            if(probill.Working_Day__c == null && probill.Working_Day_Name__c != null){
+                workingDayNames.add(probill.Working_Day_Name__c);
             }
-            List<working_day__c> working_days = [select ID from working_day__c where Name = :probill.working_day_name__c limit 1];
-            if(working_days.size() >0)
-            {
-                probill.Working_Day__c = working_days[0].id;
+            if(probill.Supernova_Performance__c == null && probill.Supernova_Name__c != null){
+                supernovaNames.add(probill.Supernova_Name__c);
             }
-           
-            if(probill.Consignee__c == null)
-            {
-                Shipper_Consignee__c thisShippCon = null;
-                if(probill.Consignee_ID__c != null)
-                {
-                    List<Shipper_Consignee__c> shipcons = [select Id from Shipper_Consignee__c where Name = :probill.Consignee_ID__c and account__c = :probill.account__r.Id limit 1];
-                    if(shipcons.size() > 0 )
-                    {
-                        thisShippCon = shipcons[0];
-                    }
-                    if(thisShippCon == null)
-                    {
-                        thisShippCon = new Shipper_Consignee__c(Name = probill.Consignee_ID__c, Type__c = 'Consignee', Address__c = probill.Consignee_Address__c, City__c = probill.Consignee_City__c, Country__c = probill.Consignee_Country__c, Name__c = probill.Consignee_Name__c, State__c = probill.Consignee_State__c, Zip__c = probill.Consignee_Zip__c, account__c = probill.account__r.id);                        
-                        insert thisShippCon;
-                    }
-                    probill.Consignee__c = thisShippCon.Id;
-                }  
+            if(probill.Shipper__c == null && probill.Shipper_ID__c != null && !ShipperConsigneeIDs.contains(probill.Consignee_ID__c)){
+                ShipperConsigneeIDs.add(probill.Shipper_ID__c);
             }
-            if(probill.Shipper__c == null)
-            {
-                Shipper_Consignee__c thisShippCon = null;
-                if(probill.Shipper_ID__c != null)
-                {
-                    List<Shipper_Consignee__c> shipcons = [select Id from Shipper_Consignee__c where Name = :probill.Shipper_ID__c and Account__c = :probill.account__r.id limit 1];
-                    if(shipcons.size() > 0 )
-                    {
-                        thisShippCon = shipcons[0];
-                    }
-                    if(thisShippCon == null)
-                    {
-                        thisShippCon = new Shipper_Consignee__c(Name = probill.Shipper_ID__c, Type__c = 'Shipper', Address__c = probill.Shipper_Address__c, City__c = probill.Shipper_City__c, Country__c = probill.Shipper_Country__c, Name__c = probill.Shipper_Name__c, State__c = probill.Shipper_State__c, Zip__c = probill.Shipper_Zip__c, Account__c = probill.account__r.id);                        
-                        insert thisShippCon;
-                    }
-                    probill.Shipper__c = thisShippCon.Id;
-                }                
-            }
-            update probill;
+            if(probill.Consignee__c == null && probill.Consignee_ID__c != null && !ShipperConsigneeIDs.contains(probill.Consignee_ID__c) ){
+                ShipperConsigneeIDs.add(probill.Consignee_ID__c);
+            }            
+            
+        } //end loop
+        
+        Map<String,Id> commissionMap = new Map<String,Id>();
+        for(Commission__c comm: [SELECT Id, Name FROM Commission__c WHERE Name in:commissionNames]){
+        	commissionMap.put(comm.Name,comm.Id);
         }
+        Map<String,Id> workingDayMap = new Map<String,Id>();
+        for(Working_Day__c wd: [SELECT Id, Name FROM Working_Day__c WHERE Name in:workingDayNames]){
+        	workingDayMap.put(wd.Name,wd.Id);
+        }
+        Map<String,Id> supernovaMap = new Map<String,Id>();
+        for(Supernova__c sup: [SELECT Id, Name FROM Supernova__c WHERE Name in:supernovaNames]){
+        	commissionMap.put(sup.Name,sup.Id);
+        }
+        Map<String,Id> shipperConsigneeMap = new Map<String,Id>();
+        for(Shipper_Consignee__c shipCon: [SELECT Id, Name FROM Shipper_Consignee__c WHERE Name in:ShipperConsigneeIDs]){
+        	shipperConsigneeMap.put(shipCon.Name,shipCon.Id);
+        }
+        
+        //Find out which records need Shipper/Consignees inserted
+        List<Shipper_Consignee__c> shipConstoInsert = new List<Shipper_Consignee__c>();
+        for(Probill__c probill : probills)
+        {
+            if( !shipperConsigneeMap.containsKey(probill.Shipper_ID__c) ){ 
+                //create Shipper
+            	shipConstoInsert.add(new Shipper_Consignee__c(Name = probill.Shipper_ID__c, Type__c = 'Shipper', Address__c = probill.Shipper_Address__c, City__c = probill.Shipper_City__c, Country__c = probill.Shipper_Country__c, Name__c = probill.Shipper_Name__c, State__c = probill.Shipper_State__c, Zip__c = probill.Shipper_Zip__c, Account__c = probill.account__r.id));
+            }
+            if( !shipperConsigneeMap.containsKey(probill.Consignee_ID__c) ){
+                //create Consignee
+                shipConstoInsert.add(new Shipper_Consignee__c(Name = probill.Consignee_ID__c, Type__c = 'Consignee', Address__c = probill.Consignee_Address__c, City__c = probill.Consignee_City__c, Country__c = probill.Consignee_Country__c, Name__c = probill.Consignee_Name__c, State__c = probill.Consignee_State__c, Zip__c = probill.Consignee_Zip__c, account__c = probill.account__r.id) );
+            }
+        }//end for loop
+        
+        if(shipConstoInsert.size() > 0){
+        	try{
+            	insert(shipConstoInsert);
+        	}
+        	catch(Exception e){
+            	system.debug('Insert Shipper/Consignee exception ' + e.getMessage());
+        	}
+            //Get inserted Shipper/Consignees and add to map
+            for(Shipper_Consignee__c SC: shipConstoInsert){
+                shipperConsigneeMap.put(SC.Name,SC.Id);
+            }
+        }
+        
+        //Loop through a final time and add all proper values
+        for(Probill__c probill: probills){
+            if(probill.Commission_Summary__c == null && commissionMap.get(probill.Commission_Name__c) != null){
+                probill.Commission_Summary__c = commissionMap.get(probill.Commission_Name__c);
+            }
+            if(probill.Working_Day__c == null && workingDayMap.get(probill.Working_Day_Name__c) != null){
+                probill.Working_Day__c = workingDayMap.get(probill.Working_Day_Name__c);
+            }
+            if(probill.Supernova_Performance__c == null && supernovaMap.get(probill.Supernova_Name__c) != null){
+                probill.Supernova_Performance__c = supernovaMap.get(probill.Supernova_Name__c);
+            }
+            if(probill.Shipper__c == null && shipperConsigneeMap.get(probill.Shipper_ID__c) != null ){
+                probill.Shipper__c = shipperConsigneeMap.get(probill.Shipper_ID__c);
+            }
+            if(probill.Consignee__c == null && shipperConsigneeMap.get(probill.Consignee_ID__c) != null){
+                probill.Consignee__c = shipperConsigneeMap.get(probill.Consignee_ID__c);
+            }
+        }//end for loop
+        try{
+            update probills;
+        }
+        catch(Exception e){
+            system.debug('Update probills Exception: ' + e.getMessage());
+        }
+        
     }
     
     global void finish(Database.BatchableContext context)
@@ -74,6 +124,6 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
     global void execute(SchedulableContext context)
     {
          UpdateAProbillsBatch task = new UpdateAProbillsBatch();
-         Database.executeBatch(task, 65);
+         Database.executeBatch(task, 200);
     }
 }
