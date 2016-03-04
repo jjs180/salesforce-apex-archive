@@ -1,0 +1,79 @@
+global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedulable
+{   
+    global database.Querylocator start(Database.BatchableContext context)
+    {
+        return Database.getQueryLocator([select Id, Quota_Date__c, Working_Day__c, working_day_name__c, Shipper__c, Shipper_Address__c, Shipper_City__c, Shipper_Country__c, Shipper_ID__c, Shipper_Name__c, Shipper_State__c, Shipper_Zip__c, Consignee__c, Consignee_Address__c, Consignee_City__c, Consignee_Country__c, Consignee_ID__c, Consignee_Name__c, Consignee_State__c, Consignee_Zip__c, Commission_Summary__c, Delivery_Month__c, Supernova_Performance__c, AE_Rate_To__c, Delivery_Start__c, Account__c, Account__r.Name from Probill__c WHERE AE_Rate_To__c != null and Delivery_Start__c != null]); 
+    }
+    
+    global void execute(Database.BatchableContext context, List<Probill__c> probills)
+    {
+        for(sObject obj : probills)
+        {
+            Probill__c probill = (Probill__c)obj;
+           
+            List<Commission__c> commissions = [select Id from Commission__c where AE_ID__r.TM_User_ID__c = :probill.AE_Rate_To__c and Report_Month__c =:probill.Delivery_Month__c  and Rate_To_Name__c = :probill.Account__r.Name limit 1];
+            if(commissions.size() > 0)
+            {
+                probill.Commission_Summary__c = commissions[0].Id;
+            }
+            List<Supernova__c> supernovas = [select Id from Supernova__c where AE_ID__r.TM_User_ID__c = :probill.AE_Rate_To__c and Report_Month__c =:probill.Delivery_Month__c limit 1];
+            if(supernovas.size() > 0)
+            {
+                probill.Supernova_Performance__c = supernovas[0].Id;
+            }
+            List<working_day__c> working_days = [select ID from working_day__c where Name = :probill.working_day_name__c limit 1];
+            if(working_days.size() >0)
+            {
+                probill.Working_Day__c = working_days[0].id;
+            }
+           
+            if(probill.Consignee__c == null)
+            {
+                Shipper_Consignee__c thisShippCon = null;
+                if(probill.Consignee_ID__c != null)
+                {
+                    List<Shipper_Consignee__c> shipcons = [select Id from Shipper_Consignee__c where Name = :probill.Consignee_ID__c and account__c = :probill.account__r.Id limit 1];
+                    if(shipcons.size() > 0 )
+                    {
+                        thisShippCon = shipcons[0];
+                    }
+                    if(thisShippCon == null)
+                    {
+                        thisShippCon = new Shipper_Consignee__c(Name = probill.Consignee_ID__c, Type__c = 'Consignee', Address__c = probill.Consignee_Address__c, City__c = probill.Consignee_City__c, Country__c = probill.Consignee_Country__c, Name__c = probill.Consignee_Name__c, State__c = probill.Consignee_State__c, Zip__c = probill.Consignee_Zip__c, account__c = probill.account__r.id);                        
+                        insert thisShippCon;
+                    }
+                    probill.Consignee__c = thisShippCon.Id;
+                }  
+            }
+            if(probill.Shipper__c == null)
+            {
+                Shipper_Consignee__c thisShippCon = null;
+                if(probill.Shipper_ID__c != null)
+                {
+                    List<Shipper_Consignee__c> shipcons = [select Id from Shipper_Consignee__c where Name = :probill.Shipper_ID__c and Account__c = :probill.account__r.id limit 1];
+                    if(shipcons.size() > 0 )
+                    {
+                        thisShippCon = shipcons[0];
+                    }
+                    if(thisShippCon == null)
+                    {
+                        thisShippCon = new Shipper_Consignee__c(Name = probill.Shipper_ID__c, Type__c = 'Shipper', Address__c = probill.Shipper_Address__c, City__c = probill.Shipper_City__c, Country__c = probill.Shipper_Country__c, Name__c = probill.Shipper_Name__c, State__c = probill.Shipper_State__c, Zip__c = probill.Shipper_Zip__c, Account__c = probill.account__r.id);                        
+                        insert thisShippCon;
+                    }
+                    probill.Shipper__c = thisShippCon.Id;
+                }                
+            }
+            update probill;
+        }
+    }
+    
+    global void finish(Database.BatchableContext context)
+    {
+    }
+    
+    global void execute(SchedulableContext context)
+    {
+         UpdateAProbillsBatch task = new UpdateAProbillsBatch();
+         Database.executeBatch(task, 65);
+    }
+}
