@@ -56,7 +56,7 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
         }
         Map<String,Id> supernovaMap = new Map<String,Id>();
         for(Supernova__c sup: [SELECT Id, Name FROM Supernova__c WHERE Name in:supernovaNames]){
-        	commissionMap.put(sup.Name,sup.Id);
+        	supernovaMap.put(sup.Name,sup.Id);
         }
         Map<String,Id> shipperConsigneeMap = new Map<String,Id>();
         for(Shipper_Consignee__c shipCon: [SELECT Id, Name FROM Shipper_Consignee__c WHERE Name in:ShipperConsigneeIDs]){
