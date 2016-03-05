@@ -1,0 +1,163 @@
+global class CalculateShipperConsigneeRevenue implements Database.Batchable<sObject>, Schedulable
+{   
+    
+    // Definitions: 
+    //   Delivery_Start__c = pickup date
+    
+    global database.Querylocator start(Database.BatchableContext context)
+    {
+        return Database.getQueryLocator([select Id, name from Shipper_Consignee__c ]); 
+    }
+    
+    global void execute(Database.BatchableContext context, List<Shipper_Consignee__c> shipperConsigneeList)
+    {
+
+        // create a map of the shippers consignees we need to update
+        Map<Id, Shipper_Consignee__c> shippersConsigneesToUpdate = new Map<Id, Shipper_Consignee__c>();
+        for(Shipper_Consignee__c shipperConsignee : shipperConsigneeList) {
+            shippersConsigneesToUpdate.put( shipperConsignee.Id, shipperConsignee );   
+        }
+        calculateCurrentMonthRevenue( shippersConsigneesToUpdate );
+        calculatePreviousMonthRevenue( shippersConsigneesToUpdate );
+        calculatePreviousYearRevenue( shippersConsigneesToUpdate );
+  //      calculateCurrentMonthWorkingDays( shippersConsigneesToUpdate );
+    //    calculatePreviousMonthWorkingDays( shippersConsigneesToUpdate );
+      //  calculatePreviousYearWorkingDays( shippersConsigneesToUpdate );
+
+
+
+        update shippersConsigneesToUpdate.values();
+        
+    }
+
+ private void calculateCurrentMonthRevenue( Map<Id, Shipper_Consignee__c> shippersConsigneesToUpdate ) {
+         AggregateResult[] queryResult = [Select shipper__c id, Sum(Rev_Curr_Total__c) ttl 
+                                        From Probill__c 
+                                        where shipper__c in :shippersConsigneesToUpdate.keySet() 
+                                            and shipper__c != ''
+                                            and delivery_start__c = THIS_MONTH
+                                        Group By shipper__c];
+                                        
+        for (AggregateResult resultRow : queryResult ) {
+            // get the shipper consignee id and find the corresponding item in the shipper consignee list so we can update Rev_Curr_Total
+            String shipperConsigneeId = (String) resultRow.get('id'); 
+            Shipper_Consignee__c shipperConsigneeToUpdate = (Shipper_Consignee__c) shippersConsigneesToUpdate.get( shipperConsigneeId );
+            
+            // update the amount
+            shipperConsigneeToUpdate.Current_Month_Revenue__c = (Decimal) resultRow.get('ttl');
+        }
+    }    
+    
+    
+    private void calculatePreviousMonthRevenue( Map<Id, Shipper_Consignee__c> shippersConsigneesToUpdate ) {
+         AggregateResult[] queryResult = [Select shipper__c id, Sum(Rev_Curr_Total__c) ttl 
+                                        From Probill__c 
+                                        where shipper__c in :shippersConsigneesToUpdate.keySet() 
+                                            and shipper__c != ''
+                                            and delivery_start__c = LAST_MONTH
+                                        Group By shipper__c];
+                                        
+        for (AggregateResult resultRow : queryResult ) {
+            // get the shipper consignee id and find the corresponding item in the shipper consignee list so we can update Rev_Curr_Total
+            String shipperConsigneeId = (String) resultRow.get('id'); 
+            Shipper_Consignee__c shipperConsigneeToUpdate = (Shipper_Consignee__c) shippersConsigneesToUpdate.get( shipperConsigneeId );
+            
+            // update the amount
+            shipperConsigneeToUpdate.PM_TL_Revenue__c = (Decimal) resultRow.get('ttl');
+        }
+    }
+
+    
+    private void calculatePreviousYearRevenue ( Map<Id, Shipper_Consignee__c> shippersConsigneesToUpdate ) {
+         AggregateResult[] queryResult = [Select shipper__c id, Sum(Rev_Curr_Total__c) ttl 
+                                        From Probill__c 
+                                        where shipper__c in :shippersConsigneesToUpdate.keySet() 
+                                            and shipper__c != ''
+                                        // updated Long Term Formula This month This Year vs This Month Last Year aka 12 months ago
+                                        //       and delivery_start__c = LAST_YEAR
+                                            and delivery_start__c = N_MONTHS_AGO:12
+                                        Group By shipper__c];
+                                        
+        for (AggregateResult resultRow : queryResult ) {
+            // get the shipper consignee id and find the corresponding item in the shipper consignee list so we can update Rev_Curr_Total
+            String shipperConsigneeId = (String) resultRow.get('id'); 
+            Shipper_Consignee__c shipperConsigneeToUpdate = (Shipper_Consignee__c) shippersConsigneesToUpdate.get( shipperConsigneeId );
+            
+            // update the amount
+            shipperConsigneeToUpdate.PY_TL_Revenue__c = (Decimal) resultRow.get('ttl');
+        }
+    }
+    
+ /*   private void calculateCurrentMonthWorkingDays( Map<Id, Shipper_Consignee__c> shippersConsigneesToUpdate ){
+       // Shipper_Consingee__c.CM_Working_Days__c = = Sum of elapsed_days__c where Working_Day__c.Quota_Date__c = this month
+        AggregateResult[] queryResult = [Select shipper__c id,  Working_Day__r.Elapsed_Days__c  ttl
+                                        From Working_Day__r  
+                                            and working_day__r.Quota_Date__c = THIS_MONTH
+                                        ];
+                                        
+       for (AggregateResult resultRow : queryResult ) {
+            // get the shipper consignee id and find the corresponding item in the shipper consignee list so we can update CM_Working_Days
+            String shipperConsigneeId = (String) resultRow.get('id'); 
+            Shipper_Consignee__c shipperConsigneeToUpdate = (Shipper_Consignee__c) shippersConsigneesToUpdate.get( shipperConsigneeId );
+            
+            // update the amount
+            shipperConsigneeToUpdate.CM_Working_Days__c = (Decimal) resultRow.get('ttl');
+        }
+    }
+    
+    
+    private void calculatePreviousMonthWorkingDays( Map<Id, Shipper_Consignee__c> shippersConsigneesToUpdate ){
+       // Shipper_Consingee__c.PM_Working_Days__c = = Sum of elapsed_days__c where Working_Day__c.Quota_Date__c = last month
+        AggregateResult[] queryResult = [Select shipper__c id, Working_Day__r.Elapsed_Days__c  ttl
+                                        From Probill__c  
+                                        where shipper__c in :shippersConsigneesToUpdate.keySet() 
+                                            and shipper__c != ''
+                                            and working_day__r.Quota_Date__c = LAST_MONTH
+                                        Group By shipper__c];
+                                        
+       for (AggregateResult resultRow : queryResult ) {
+            // get the shipper consignee id and find the corresponding item in the shipper consignee list so we can update PM_Working_Days
+            String shipperConsigneeId = (String) resultRow.get('id'); 
+            Shipper_Consignee__c shipperConsigneeToUpdate = (Shipper_Consignee__c) shippersConsigneesToUpdate.get( shipperConsigneeId );
+            
+            // update the amount
+            shipperConsigneeToUpdate.PM_Working_Days__c = (Decimal) resultRow.get('ttl');
+        }
+    }
+   
+    private void calculatePreviousYearWorkingDays( Map<Id, Shipper_Consignee__c> shippersConsigneesToUpdate  ){
+       // Shipper_Consingee__c.PM_Working_Days__c = = elapsed_days__c where Working_Day__c.Quota_Date__c = last month
+        AggregateResult[] queryResult = [Select shipper__c id,  Working_Day__r.Elapsed_Days__c  ttl
+                                        From Probill__c  
+                                        where shipper__c in :shippersConsigneesToUpdate.keySet() 
+                                            and shipper__c != ''
+                                         // Long Term Calculation from Last Year to This Month Last Year
+                                           //and working_day__r.Quota_Date__c = LAST_YEAR
+                                            and working_day__r.Quota_Date__c = N_MONTHS_AGO:12
+                                                    
+                                        Group By shipper__c];
+                                        
+       for (AggregateResult resultRow : queryResult ) {
+            // get the shipper consignee id and find the corresponding item in the shipper consignee list so we can update CY_Working_Days
+            String shipperConsigneeId = (String) resultRow.get('id'); 
+            Shipper_Consignee__c shipperConsigneeToUpdate = (Shipper_Consignee__c) shippersConsigneesToUpdate.get( shipperConsigneeId );
+            
+            // update the amount
+            shipperConsigneeToUpdate.PY_Working_Days__c = (Decimal) resultRow.get('ttl');
+        }
+    }
+    
+   */ 
+
+
+    
+    global void finish(Database.BatchableContext context)
+    {
+    }
+    
+    global void execute(SchedulableContext context)
+    {
+        CalculateShipperConsigneeRevenue task = new CalculateShipperConsigneeRevenue();
+        Database.executeBatch(task);
+    }
+}
