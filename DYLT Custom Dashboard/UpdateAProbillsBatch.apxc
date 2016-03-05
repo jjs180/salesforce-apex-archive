@@ -21,8 +21,8 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
         Set<String> commissionNames = new Set<String>();
         Set<String> workingDayNames = new Set<String>();
         Set<String> supernovaNames = new Set<String>();
-        Set<String> ShipperConsigneeIDs = new Set<String>();
-        //Set<String> ConsigneeIDs = new Set<String>();
+        Set<String> ShipperIDs = new Set<String>();
+        Set<String> ConsigneeIDs = new Set<String>();
         
         for(Probill__c probill : probills)
         {
@@ -37,11 +37,11 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
             if(probill.Supernova_Performance__c == null && probill.Supernova_Name__c != null){
                 supernovaNames.add(probill.Supernova_Name__c);
             }
-            if(probill.Shipper__c == null && probill.Shipper_ID__c != null && !ShipperConsigneeIDs.contains(probill.Shipper_ID__c)){
-                ShipperConsigneeIDs.add(probill.Shipper_ID__c);
+            if(probill.Shipper__c == null && probill.Shipper_ID__c != null && !ShipperIDs.contains(probill.Shipper_ID__c)){
+                ShipperIDs.add(probill.Shipper_ID__c);
             }
-            if(probill.Consignee__c == null && probill.Consignee_ID__c != null && !ShipperConsigneeIDs.contains(probill.Consignee_ID__c) ){
-                ShipperConsigneeIDs.add(probill.Consignee_ID__c);
+            if(probill.Consignee__c == null && probill.Consignee_ID__c != null && !ConsigneeIDs.contains(probill.Consignee_ID__c) ){
+                ConsigneeIDs.add(probill.Consignee_ID__c);
             }            
             
         } //end loop
@@ -58,20 +58,23 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
         for(Supernova__c sup: [SELECT Id, Name FROM Supernova__c WHERE Name in:supernovaNames]){
         	supernovaMap.put(sup.Name,sup.Id);
         }
-        Map<String,Id> shipperConsigneeMap = new Map<String,Id>();
-        for(Shipper_Consignee__c shipCon: [SELECT Id, Name FROM Shipper_Consignee__c WHERE Name in:ShipperConsigneeIDs]){
-        	shipperConsigneeMap.put(shipCon.Name,shipCon.Id);
+        Map<String,Shipper_Consignee__c> shipperMap = new Map<String,Shipper_Consignee__c>();
+        for(Shipper_Consignee__c shipCon: [SELECT Id, Name, Type__c FROM Shipper_Consignee__c WHERE Name in:ShipperIDs AND Type__c='Shipper']){
+        	shipperMap.put(shipCon.Name,shipCon);
         }
-        
+        Map<String,Shipper_Consignee__c> consigneeMap = new Map<String,Shipper_Consignee__c>();
+        for(Shipper_Consignee__c shipCon: [SELECT Id, Name, Type__c FROM Shipper_Consignee__c WHERE Name in:ConsigneeIDs AND Type__c='Consignee']){
+        	consigneeMap.put(shipCon.Name,shipCon);
+        }        
         //Find out which records need Shipper/Consignees inserted
         List<Shipper_Consignee__c> shipConstoInsert = new List<Shipper_Consignee__c>();
         for(Probill__c probill : probills)
         {
-            if( !shipperConsigneeMap.containsKey(probill.Shipper_ID__c) ){ 
+            if( !shipperMap.containsKey(probill.Shipper_ID__c) ){ 
                 //create Shipper
             	shipConstoInsert.add(new Shipper_Consignee__c(Name = probill.Shipper_ID__c, Type__c = 'Shipper', Address__c = probill.Shipper_Address__c, City__c = probill.Shipper_City__c, Country__c = probill.Shipper_Country__c, Name__c = probill.Shipper_Name__c, State__c = probill.Shipper_State__c, Zip__c = probill.Shipper_Zip__c, Account__c = probill.account__r.id));
             }
-            if( !shipperConsigneeMap.containsKey(probill.Consignee_ID__c) ){
+            if( !consigneeMap.containsKey(probill.Consignee_ID__c) ){
                 //create Consignee
                 shipConstoInsert.add(new Shipper_Consignee__c(Name = probill.Consignee_ID__c, Type__c = 'Consignee', Address__c = probill.Consignee_Address__c, City__c = probill.Consignee_City__c, Country__c = probill.Consignee_Country__c, Name__c = probill.Consignee_Name__c, State__c = probill.Consignee_State__c, Zip__c = probill.Consignee_Zip__c, account__c = probill.account__r.id) );
             }
@@ -86,7 +89,12 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
         	}
             //Get inserted Shipper/Consignees and add to map
             for(Shipper_Consignee__c SC: shipConstoInsert){
-                shipperConsigneeMap.put(SC.Name,SC.Id);
+                IF(SC.Type__c == 'Shipper' ){
+                	shipperMap.put(SC.Name,SC);
+                }
+                ELSE IF(SC.Type__c == 'Consignee' ){
+                	consigneeMap.put(SC.Name,SC);
+                }                
             }
         }
         
@@ -101,11 +109,11 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
             if(probill.Supernova_Performance__c == null && supernovaMap.get(probill.Supernova_Name__c) != null){
                 probill.Supernova_Performance__c = supernovaMap.get(probill.Supernova_Name__c);
             }
-            if(probill.Shipper__c == null && shipperConsigneeMap.get(probill.Shipper_ID__c) != null ){
-                probill.Shipper__c = shipperConsigneeMap.get(probill.Shipper_ID__c);
+            if(probill.Shipper__c == null && shipperMap.get(probill.Shipper_ID__c) != null  && shipperMap.get(probill.Shipper_ID__c).Type__c =='Shipper' ){
+                probill.Shipper__c = shipperMap.get(probill.Shipper_ID__c).Id;
             }
-            if(probill.Consignee__c == null && shipperConsigneeMap.get(probill.Consignee_ID__c) != null){
-                probill.Consignee__c = shipperConsigneeMap.get(probill.Consignee_ID__c);
+            if(probill.Consignee__c == null && consigneeMap.get(probill.Consignee_ID__c) != null  && consigneeMap.get(probill.Consignee_ID__c).Type__c =='Consignee' ){
+                probill.Consignee__c = consigneeMap.get(probill.Consignee_ID__c).Id;
             }
         }//end for loop
         try{
@@ -124,6 +132,6 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
     global void execute(SchedulableContext context)
     {
          UpdateAProbillsBatch task = new UpdateAProbillsBatch();
-         Database.executeBatch(task, 200);
+         Database.executeBatch(task, 500);
     }
 }
