@@ -37,7 +37,7 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
             if(probill.Supernova_Performance__c == null && probill.Supernova_Name__c != null){
                 supernovaNames.add(probill.Supernova_Name__c);
             }
-            if(probill.Shipper__c == null && probill.Shipper_ID__c != null && !ShipperConsigneeIDs.contains(probill.Consignee_ID__c)){
+            if(probill.Shipper__c == null && probill.Shipper_ID__c != null && !ShipperConsigneeIDs.contains(probill.Shipper_ID__c)){
                 ShipperConsigneeIDs.add(probill.Shipper_ID__c);
             }
             if(probill.Consignee__c == null && probill.Consignee_ID__c != null && !ShipperConsigneeIDs.contains(probill.Consignee_ID__c) ){
