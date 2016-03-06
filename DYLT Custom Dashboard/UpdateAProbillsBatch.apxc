@@ -68,14 +68,18 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
         }        
         //Find out which records need Shipper/Consignees inserted
         List<Shipper_Consignee__c> shipConstoInsert = new List<Shipper_Consignee__c>();
+        Set<String> shipperInsertIDs = new Set<String>();
+        Set<String> consigneeInsertIDs = new Set<String>();
         for(Probill__c probill : probills)
         {
-            if( !shipperMap.containsKey(probill.Shipper_ID__c) ){ 
+            if( !shipperMap.containsKey(probill.Shipper_ID__c) && !shipperInsertIDs.contains(probill.Shipper_ID__c) ){ 
                 //create Shipper
+                shipperInsertIDs.add(probill.Shipper_ID__c);
             	shipConstoInsert.add(new Shipper_Consignee__c(Name = probill.Shipper_ID__c, Type__c = 'Shipper', Address__c = probill.Shipper_Address__c, City__c = probill.Shipper_City__c, Country__c = probill.Shipper_Country__c, Name__c = probill.Shipper_Name__c, State__c = probill.Shipper_State__c, Zip__c = probill.Shipper_Zip__c, Account__c = probill.account__r.id));
             }
-            if( !consigneeMap.containsKey(probill.Consignee_ID__c) ){
+            if( !consigneeMap.containsKey(probill.Consignee_ID__c) && !consigneeInsertIDs.contains(probill.Consignee_ID__c) ){
                 //create Consignee
+                consigneeInsertIDs.add(probill.Consignee_ID__c);
                 shipConstoInsert.add(new Shipper_Consignee__c(Name = probill.Consignee_ID__c, Type__c = 'Consignee', Address__c = probill.Consignee_Address__c, City__c = probill.Consignee_City__c, Country__c = probill.Consignee_Country__c, Name__c = probill.Consignee_Name__c, State__c = probill.Consignee_State__c, Zip__c = probill.Consignee_Zip__c, account__c = probill.account__r.id) );
             }
         }//end for loop
