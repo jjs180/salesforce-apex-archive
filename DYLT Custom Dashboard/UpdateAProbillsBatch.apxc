@@ -13,8 +13,9 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
                                          FROM Probill__c 
                                          WHERE AE_Rate_To__c != NULL AND Delivery_Start__c != NULL AND
                                          (Working_Day__c = NULL OR Shipper__c = NULL OR Consignee__c = NULL
-                                          OR Commission_Summary__c = NULL OR Supernova_Performance__c = NULL)]); 
-    }
+                                          OR Commission_Summary__c = NULL OR Supernova_Performance__c = NULL)
+                                        AND Shipper_ID__c != NULL AND Consignee_ID__c != NULL]);   
+    }									//Last line ignores probills that are missing the Shipper or Consignee ID
     
     global void execute(Database.BatchableContext context, List<Probill__c> probills)
     {
@@ -59,28 +60,34 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
         	supernovaMap.put(sup.Name,sup.Id);
         }
         Map<String,Shipper_Consignee__c> shipperMap = new Map<String,Shipper_Consignee__c>();
-        for(Shipper_Consignee__c shipCon: [SELECT Id, Name, Type__c FROM Shipper_Consignee__c WHERE Name in:ShipperIDs AND Type__c='Shipper']){
+        Set<Id> shipperAcctIdSet = new Set<Id>();
+        for(Shipper_Consignee__c shipCon: [SELECT Id, Name, Type__c, Account__c FROM Shipper_Consignee__c WHERE Name in:ShipperIDs AND Type__c='Shipper']){
         	shipperMap.put(shipCon.Name,shipCon);
+            shipperAcctIdSet.add(shipCon.Account__c);
         }
         Map<String,Shipper_Consignee__c> consigneeMap = new Map<String,Shipper_Consignee__c>();
-        for(Shipper_Consignee__c shipCon: [SELECT Id, Name, Type__c FROM Shipper_Consignee__c WHERE Name in:ConsigneeIDs AND Type__c='Consignee']){
+        Set<Id> consigneeAcctIdSet = new Set<Id>();
+        for(Shipper_Consignee__c shipCon: [SELECT Id, Name, Type__c, Account__c FROM Shipper_Consignee__c WHERE Name in:ConsigneeIDs AND Type__c='Consignee']){
         	consigneeMap.put(shipCon.Name,shipCon);
+            consigneeAcctIdSet.add(shipCon.Account__c);
         }        
         //Find out which records need Shipper/Consignees inserted
         List<Shipper_Consignee__c> shipConstoInsert = new List<Shipper_Consignee__c>();
-        Set<String> shipperInsertIDs = new Set<String>();
-        Set<String> consigneeInsertIDs = new Set<String>();
+        //Set<String> shipperInsertIDs = new Set<String>();
+        //Set<String> consigneeInsertIDs = new Set<String>();
         for(Probill__c probill : probills)
         {
-            if( !shipperMap.containsKey(probill.Shipper_ID__c) && !shipperInsertIDs.contains(probill.Shipper_ID__c) ){ 
+            if( !shipperMap.containsKey(probill.Shipper_ID__c) && !shipperAcctIdSet.contains(probill.Account__c)/*!shipperInsertIDs.contains(probill.Shipper_ID__c)*/ ){ 
                 //create Shipper
-                shipperInsertIDs.add(probill.Shipper_ID__c);
+                //shipperInsertIDs.add(probill.Shipper_ID__c);
             	shipConstoInsert.add(new Shipper_Consignee__c(Name = probill.Shipper_ID__c, Type__c = 'Shipper', Address__c = probill.Shipper_Address__c, City__c = probill.Shipper_City__c, Country__c = probill.Shipper_Country__c, Name__c = probill.Shipper_Name__c, State__c = probill.Shipper_State__c, Zip__c = probill.Shipper_Zip__c, Account__c = probill.account__r.id));
+            	shipperAcctIdSet.add(probill.Account__c);
             }
-            if( !consigneeMap.containsKey(probill.Consignee_ID__c) && !consigneeInsertIDs.contains(probill.Consignee_ID__c) ){
+            if( !consigneeMap.containsKey(probill.Consignee_ID__c) && !consigneeAcctIdSet.contains(probill.Account__c)/*!consigneeInsertIDs.contains(probill.Consignee_ID__c)*/ ){
                 //create Consignee
-                consigneeInsertIDs.add(probill.Consignee_ID__c);
+                //consigneeInsertIDs.add(probill.Consignee_ID__c);
                 shipConstoInsert.add(new Shipper_Consignee__c(Name = probill.Consignee_ID__c, Type__c = 'Consignee', Address__c = probill.Consignee_Address__c, City__c = probill.Consignee_City__c, Country__c = probill.Consignee_Country__c, Name__c = probill.Consignee_Name__c, State__c = probill.Consignee_State__c, Zip__c = probill.Consignee_Zip__c, account__c = probill.account__r.id) );
+            	consigneeAcctIdSet.Add(probill.Account__c);
             }
         }//end for loop
         
