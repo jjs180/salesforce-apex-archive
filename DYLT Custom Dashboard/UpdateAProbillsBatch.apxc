@@ -71,18 +71,20 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
         }        
         //Find out which records need Shipper/Consignees inserted
         List<Shipper_Consignee__c> shipConstoInsert = new List<Shipper_Consignee__c>();
-
+		Set<String> newShipperIDSet = new Set<String>();
+        Set<String> newConsigneeIDSet = new Set<String>();
+        
         for(Probill__c probill : probills)
         {
-            if( !shipperMap.containsKey(probill.ShipperAccountID__c) && !ShipperAcctIds.contains(probill.ShipperAccountID__c) ){ 
+            if( !shipperMap.containsKey(probill.ShipperAccountID__c) && !newShipperIDSet.contains(probill.ShipperAccountID__c) ){ 
                 //create new Shipper-Account combo record
             	shipConstoInsert.add(new Shipper_Consignee__c(Name = probill.Shipper_ID__c, Type__c = 'Shipper', Address__c = probill.Shipper_Address__c, City__c = probill.Shipper_City__c, Country__c = probill.Shipper_Country__c, Name__c = probill.Shipper_Name__c, State__c = probill.Shipper_State__c, Zip__c = probill.Shipper_Zip__c, Account__c = probill.account__r.id));
-            	ShipperAcctIds.add(probill.ShipperAccountID__c);
+            	newShipperIDSet.add(probill.ShipperAccountID__c);
             }
-            if( !consigneeMap.containsKey(probill.ConsigneeAccountID__c) && !ConsigneeAcctIds.contains(probill.ConsigneeAccountID__c) ){
+            if( !consigneeMap.containsKey(probill.ConsigneeAccountID__c) && !newConsigneeIDSet.contains(probill.ConsigneeAccountID__c) ){
                 //create Consignee-Account combo record
                 shipConstoInsert.add(new Shipper_Consignee__c(Name = probill.Consignee_ID__c, Type__c = 'Consignee', Address__c = probill.Consignee_Address__c, City__c = probill.Consignee_City__c, Country__c = probill.Consignee_Country__c, Name__c = probill.Consignee_Name__c, State__c = probill.Consignee_State__c, Zip__c = probill.Consignee_Zip__c, account__c = probill.account__r.id) );
-            	ConsigneeAcctIds.add(probill.ConsigneeAccountID__c);
+            	newConsigneeIDSet.add(probill.ConsigneeAccountID__c);
             }
         }//end for loop
         
@@ -101,8 +103,7 @@ global class UpdateAProbillsBatch implements Database.Batchable<sObject>, Schedu
         	consigneeMap = new Map<String,Shipper_Consignee__c>();
         	for(Shipper_Consignee__c shipCon: [SELECT Id, Name, Type__c, Account__c, ShipConAccountID__c FROM Shipper_Consignee__c WHERE ShipConAccountID__c in:ConsigneeAcctIds AND Type__c='Consignee']){
         		consigneeMap.put(shipCon.ShipConAccountID__c, shipCon);
-        	}    
-            
+        	}               
         }
         
         //Loop through a final time and add all proper values
