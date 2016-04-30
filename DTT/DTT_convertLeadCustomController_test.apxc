@@ -1,0 +1,128 @@
+@isTest
+private class DTT_convertLeadCustomController_test{
+    static testmethod void customLeadConvert(){
+        DTT_Admin_User__c adminUser = new DTT_Admin_User__c();
+        adminUser.Name = 'Admin';
+        adminUser.User_ID__c = UserInfo.getUserId();        
+        insert adminUser;
+        system.assertNotEquals(adminUser.Id,null);
+        
+        account acc = new account(name='test company',phone='123456789',Concept_TEXT__c='test');
+        insert acc;
+        system.assertNotEquals(acc.Id,null);
+        
+        contact con = new contact(firstname='test',lastname ='test',email='a@gmail.com',accountId=acc.Id);
+        insert con;
+        system.assertNotEquals(con.Id,null);
+        
+        lead leadRecord = new lead(lastname ='test',Concept_TEXT__c='test',company = 'test company',Status='New',email='a@gmail.com',LeadSource='Direct',phone='1234567890',firstname ='test',PostalCode='12345',description='test Description',city='test City',state='test State',country='USA',street ='123 Street');
+        insert leadRecord; 
+        system.assertNotEquals(leadRecord.Id,null);
+        
+        Ignored_Company_Name_Text__c customSetting = new Ignored_Company_Name_Text__c(Name = 'Ignored Values', Values__c = 'corp;llc;inc');
+        insert customSetting;
+        system.assertNotEquals(customSetting.Id,null);
+        
+        test.startTest();
+            ApexPages.StandardController sc = new ApexPages.StandardController(leadRecord);
+            DTT_convertLeadCustomController customLeadController = new DTT_convertLeadCustomController(sc);
+            customLeadController.firstNameVal = 'test';
+            customLeadController.lastNameVal = 'test';
+            customLeadController.emailVal = 'a@gmail.com';          
+            customLeadController.accountNameVal ='test company';
+            customLeadController.phoneVal='1234567890';
+            customLeadController.postalCodeVal='12345';
+            customLeadController.conceptVal='test';
+            customLeadController.updateResults();
+            customLeadController.newContact = true;
+            customLeadController.updateResults();
+            customLeadController.newAccount = true;
+            customLeadController.updateResults();
+            customLeadController.cancel();
+            customLeadController.convert();
+            customLeadController.sectionDisp();
+            customLeadController.sectionDisp1();
+        test.stopTest();
+    }
+    static testmethod void customLeadSelectContact(){
+        DTT_Admin_User__c adminUser = new DTT_Admin_User__c();
+        adminUser.Name = 'Admin';
+        adminUser.User_ID__c = UserInfo.getUserId();        
+        insert adminUser;
+        system.assertNotEquals(adminUser.Id,null);
+        
+        account acc = new account(name='test company',phone='123456789',Concept_TEXT__c='test');
+        insert acc;
+        system.assertNotEquals(acc.Id,null);
+        
+        contact con = new contact(firstname='test',lastname ='test',email='a@gmail.com',accountId=acc.Id);
+        insert con;
+        system.assertNotEquals(con.Id,null);
+        
+        lead leadRecord = new lead(lastname ='test',Concept_TEXT__c='test',company = 'test company',Status='New',email='a@gmail.com',LeadSource='Direct',phone='1234567890',firstname ='test',PostalCode='12345',description='test Description',city='test City',state='test State',country='USA',street ='123 Street',Phone_2__c='123456',Phone_3__c='123455676',Phone_4__c='13423456',Ext_1__c='2343456',Ext_2__c='123423456',Ext_3__c='457456',Ext_4__c='19786236');
+        insert leadRecord; 
+        system.assertNotEquals(leadRecord.Id,null);
+        
+        test.startTest();
+            ApexPages.StandardController sc = new ApexPages.StandardController(leadRecord);
+            DTT_convertLeadCustomController customLeadController = new DTT_convertLeadCustomController(sc);
+            customLeadController.firstNameVal = 'test';         
+            customLeadController.lastNameVal = 'test';
+            customLeadController.emailVal = 'a@gmail.com';          
+            customLeadController.accountNameVal ='test company';
+            customLeadController.phoneVal='1234567890';
+            customLeadController.postalCodeVal='12345';
+            customLeadController.conceptVal='test';
+            customLeadController.updateResults();
+            DTT_convertLeadCustomController.contactWrapper conWrap = new DTT_convertLeadCustomController.contactWrapper(con);
+            conWrap.conSelected = true;
+            
+            DTT_convertLeadCustomController.accountWrapper accWrap = new DTT_convertLeadCustomController.accountWrapper(acc);
+            accWrap.accSelected = true;
+            
+            customLeadController.lstConWrapper.add(conWrap);
+            customLeadController.lstAccountWrapper.add(accWrap);
+            customLeadController.convert();
+        test.stopTest();
+    }
+    static testmethod void customLeadSelectAccount(){
+        DTT_Admin_User__c adminUser = new DTT_Admin_User__c();
+        adminUser.Name = 'Admin';
+        adminUser.User_ID__c = UserInfo.getUserId();        
+        insert adminUser;
+        system.assertNotEquals(adminUser.Id,null);
+        
+        account acc = new account(name='test company',phone='123456789',Concept_TEXT__c='test');
+        insert acc;
+        system.assertNotEquals(acc.Id,null);
+        
+        contact con = new contact(firstname='test',lastname ='test',email='a@gmail.com',accountId=acc.Id);
+        insert con;
+        system.assertNotEquals(con.Id,null);
+        
+        lead leadRecord = new lead(lastname ='test',Concept_TEXT__c='test',company = 'test company',Status='New',email='a@gmail.com',LeadSource='Direct',phone='1234567890',firstname ='test',PostalCode='12345',description='test Description',city='test City',state='test State',country='USA',street ='123 Street',Phone_2__c='123456',Phone_3__c='123455676',Phone_4__c='13423456',Ext_1__c='2343456',Ext_2__c='123423456',Ext_3__c='457456',Ext_4__c='19786236');
+        insert leadRecord; 
+        system.assertNotEquals(leadRecord.Id,null);
+        
+        test.startTest();
+            ApexPages.StandardController sc = new ApexPages.StandardController(leadRecord);
+            DTT_convertLeadCustomController customLeadController = new DTT_convertLeadCustomController(sc);
+            customLeadController.firstNameVal = 'test';         
+            customLeadController.lastNameVal = 'test';
+            customLeadController.accountNameVal ='test company';
+            customLeadController.phoneVal='1234567890';
+            customLeadController.postalCodeVal='12345';
+            customLeadController.conceptVal='test';
+            customLeadController.emailVal = 'a@gmail.com';
+            customLeadController.updateResults();
+            customLeadController.newContact = true;
+            customLeadController.newAccount = false;
+            
+            DTT_convertLeadCustomController.accountWrapper accWrap = new DTT_convertLeadCustomController.accountWrapper(acc);
+            accWrap.accSelected = true;
+            
+            customLeadController.lstAccountWrapper.add(accWrap);
+            customLeadController.convert();
+        test.stopTest();
+    }
+}

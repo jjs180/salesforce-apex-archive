@@ -1,0 +1,463 @@
+public without sharing class DTT_convertLeadCustomController {
+    public string firstNameVal{get;set;}
+    public string lastNameVal{get;set;}
+    public string emailVal{get;set;}
+    public string phoneVal{get;set;}
+    public string postalCodeVal{get;set;}
+    public string conceptVal{get;set;}
+    public string accountNameVal{get;set;}
+    public boolean covertEnable{get;set;}
+    Id leadId;
+    list<contact>lstContact;
+    list<account>lstAccount;
+    public boolean newContact{get;set;}
+    public boolean newAccount{get;set;}
+    Id storeRecTypeId;
+    public list<contactWrapper>lstConWrapper{get;set;}
+    public list<accountWrapper>lstAccountWrapper{get;set;}
+    list<lead>lstlead;
+    
+    public DTT_convertLeadCustomController(ApexPages.StandardController controller) {
+        lstlead = [SELECT firstname,lastname,Email,Phone,Concept_TEXT__c,PostalCode,Address,Description,
+                   Company,ownerId,city,state,country,street,Ext_1__c,Ext_2__c,Ext_3__c,Ext_4__c,
+                   Phone_2__c,Phone_3__c,Phone_4__c,Account_R_Type__c,Ignore_Assignment__c,  
+                   Insert_Account_Team__c,Lead_Gen_owner__c, Proper_Concept__c, Specialty__c,Number_of_Locations__c,
+                   SFSSDupeCatcher__Override_DupeCatcher__c
+                   FROM Lead WHERE id =: controller.getId() limit 1];
+        firstNameVal = '';
+        lastNameVal = '';
+        emailVal = '';
+        phoneVal = '';
+        accountNameVal = '';
+        postalCodeVal='';
+        conceptVal='';
+        covertEnable = false;
+        storeRecTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Store').getRecordTypeId();
+        newContact = false;
+        newAccount = false;
+        lstContact = new list<contact>();
+        lstAccount = new list<account>();
+        lstConWrapper = new list<contactWrapper>();
+        lstAccountWrapper = new list<accountWrapper>();
+        
+        if(!lstlead.isEmpty()){
+            if(!string.isBlank(lstlead[0].PostalCode))
+                postalCodeVal = lstlead[0].PostalCode;
+            if(!string.isBlank(lstlead[0].Concept_TEXT__c))
+                conceptVal = lstlead[0].Concept_TEXT__c;
+        }       
+        leadId = controller.getId();
+    }
+    public void sectionDisp(){
+        covertEnable = false;
+        newContact=false;
+        newAccount = false;
+        for(contactWrapper conWrap : lstConWrapper){
+            if(conWrap.conSelected){
+                covertEnable = true;
+            }
+        }
+    }
+    public void sectionDisp1(){
+        covertEnable = false;
+        if(newAccount){
+            covertEnable = true;
+        }
+        else{
+            for(accountWrapper accWrap : lstAccountWrapper){
+                if(accWrap.accSelected){
+                    covertEnable = true;
+                }
+            }
+        }
+    }
+    public void updateResults(){
+        lstContact = new list<contact>();
+        lstAccount = new list<account>();
+        lstConWrapper = new list<contactWrapper>();
+        lstAccountWrapper = new list<accountWrapper>();
+        
+        system.debug('@@@1___'+newContact+'__'+newAccount);
+        if(newContact){
+            covertEnable = true;
+        }
+        
+        string query = 'SELECT Id,Account.Name,Account.Concept_TEXT__c,Account.BillingPostalCode,firstname,lastname,email,phone,accountId,Ext_1__c,Ext_2__c,Ext_3__c,Ext_4__c,' + 
+            'Phone_2__c,Phone_3__c,Phone_4__c,description, SFSSDupeCatcher__Override_DupeCatcher__c,mailingPostalCode FROM Contact ';
+        string whereCondition = 'WHERE Account.RecordTypeId != \'' + storeRecTypeId + '\' AND ' ;
+        string filterCondition = '';
+        if(newContact)
+            newAccount=true;
+        if(!string.isBlank(emailVal) || !string.isBlank(phoneVal)){
+            if(!string.isBlank(firstNameVal))
+                filterCondition = 'firstName like \'%' + String.escapeSingleQuotes(firstNameVal.trim()) + '%\' ';
+            if(!string.isBlank(lastNameVal)){
+                if(!string.isBlank(filterCondition))
+                    filterCondition = filterCondition + ' AND ';
+                filterCondition = filterCondition + ' lastName like \'%' + String.escapeSingleQuotes(lastNameVal.trim()) + '%\' ';
+            }
+            if(!string.isBlank(phoneVal)){
+                //Strip Non-Numeric Characters from Phone Value
+                string phoneFilterVal = phoneVal.trim();
+                phoneFilterVal = phoneFilterVal.replaceAll('[^0-9]', '%');
+                system.debug('phoneFilterVal____ ' + phoneFilterVal);
+                if(!string.isBlank(filterCondition))
+                    filterCondition = filterCondition + ' AND ';
+                if(!string.isBlank(emailVal))
+                    filterCondition = filterCondition + '(';
+                filterCondition = filterCondition + ' phone like \'%' + String.escapeSingleQuotes(phoneFilterVal) + '%\' ';
+            }
+            if(!string.isBlank(emailVal)){
+                if(!string.isBlank(filterCondition)){
+                    if(!string.isBlank(phoneVal))
+                        filterCondition = filterCondition + ' OR ';
+                    else
+                        filterCondition = filterCondition + ' AND ';
+                }
+                filterCondition = filterCondition + ' email like \'%' + String.escapeSingleQuotes(emailVal.trim()) + '%\' ';
+                if(!string.isBlank(phoneVal))
+                filterCondition = filterCondition + ')';
+            }
+        }
+        else{
+            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR,'Please enter either Email/Phone to proceed.'));
+            return;
+        }
+        if((!string.isBlank(accountNameVal)) && newContact){
+            Ignored_Company_Name_Text__c ignoretextObj = Ignored_Company_Name_Text__c.getValues('Ignored Values');
+            string filterVal = accountNameVal.toLowerCase();
+            if(ignoretextObj != null){
+                for(string str : ignoretextObj.Values__c.split(';')){
+                    system.debug('Ignore String___ ' + str);
+                    filterVal = filterVal.replace(str.toLowerCase(),'%');
+                    system.debug('filterVal___ ' + filterVal);
+                }
+            }
+            system.debug('replace____'+filterVal);
+            string accountFilter = '%' + filterVal.trim() + '%';
+            system.debug('account filter___' + accountFilter);
+            lstAccount = [SELECT id,name,Phone,Billingstreet,BillingCity,Billingstate,Billingcountry,
+                          BillingPostalCode,Concept_TEXT__c,Store__c,Status__c,ownerId, Account_R_Type__c, 
+                          Ignore_Assignment__c,Insert_Account_Team__c,Lead_Gen_Owner__c,Specialty__c,Number_of_Locations__c 
+                          FROM account WHERE Name LIKE : accountFilter AND recordTypeId != : storeRecTypeId];
+            if(!lstAccount.isEmpty()){
+                for(account acc : lstAccount){
+                    lstAccountWrapper.add(new accountWrapper(acc));
+                }
+            }
+        }
+        if(!string.isBlank(filterCondition)){
+            query = query + whereCondition + filterCondition + ' LIMIT 1000';
+            lstContact = database.query(query);
+            if(!lstContact.isEmpty()){
+                for(contact con : lstContact){
+                    lstConWrapper.add(new contactWrapper(con));
+                }
+            }
+        }
+    }
+    
+    public pageReference cancel(){
+        pageReference pg = new pageReference('/'+leadId);
+        return pg;
+    }
+    public pageReference convert(){
+        Savepoint sp = Database.setSavepoint();
+        try{
+            if(string.isBlank(emailVal) && string.isBlank(phoneVal)){
+                 ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR,'Please enter either Email/Phone to proceed.'));
+                 return null;
+            }           
+
+            list<account>lstAccount = new list<account>();
+            list<contact>lstContact = new list<contact>();
+            Id contactId;
+            Id accountId;
+            system.debug('@@@@___'+newAccount+'__'+newContact);
+            account accountRec = new account();
+            account accountRecStore = new account();
+            if(newAccount){         
+                
+                Id franchiseRecTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Franchise Organization').getRecordTypeId();
+                
+                if(!string.isBlank(accountNameVal)){
+                    accountRec.name = accountNameVal;
+                }
+                else{
+                    ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR,'Please Enter Account Name.'));
+                    return null;
+                }
+                accountRec.recordTypeId = franchiseRecTypeId;
+                if(!string.isBlank(phoneVal))
+                    accountRec.phone = phoneVal;
+                if(!string.isBlank(conceptVal))
+                    accountRec.Concept_TEXT__c = conceptVal;
+                if(!string.isBlank(postalCodeVal))
+                    accountRec.BillingPostalCode = postalCodeVal;
+                if(!string.isBlank(lstlead[0].State))
+                    accountRec.BillingState = lstlead[0].State;
+                
+                //Map custom fields on Create New Franchise OrganizationAccount
+                accountRec.Account_R_Type__c = lstlead[0].Account_R_Type__c;
+                accountRec.Ignore_Assignment__c  = lstlead[0].Ignore_Assignment__c;
+                accountRec.Insert_Account_Team__c = lstlead[0].Insert_Account_Team__c;
+                accountRec.Proper_Concept__c   = lstlead[0].Proper_Concept__c;
+                accountRec.Specialty__c   = lstlead[0].Specialty__c;
+                accountRec.Lead_Gen_Owner__c  = lstlead[0].Lead_Gen_Owner__c;    
+                accountRec.Number_of_Locations__c  = lstlead[0].Number_of_Locations__c;
+                accountRec.Account_R_Type__c = 'Franchise Organization';
+                //
+                
+                if(!string.isBlank(lstlead[0].Company)){
+                    accountRecStore.name = lstlead[0].Concept_TEXT__c + ' ' +lstlead[0].Company;
+                }
+                else{
+                    ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR,'Please Enter Company Name on Lead record.'));
+                    return null;
+                }
+                if(!string.isBlank(lstlead[0].phone))
+                    accountRecStore.phone = lstlead[0].phone;
+                accountRecStore.recordTypeId = storeRecTypeId;
+                accountRecStore.Concept_TEXT__c = lstlead[0].Concept_TEXT__c;
+                accountRecStore.Store__c = lstlead[0].Company;
+                accountRecStore.BillingStreet = lstlead[0].street;
+                accountRecStore.BillingCity = lstlead[0].city;
+                accountRecStore.BillingState = lstlead[0].state;
+                accountRecStore.BillingCountry = lstlead[0].country;
+                accountRecStore.BillingPostalCode = lstlead[0].postalCode;
+                accountRecStore.Status__c = 'Prospect - Active';
+                accountRecStore.ownerId = lstlead[0].ownerId;
+                
+            }
+            else{
+                for(accountWrapper accWrap : lstAccountWrapper){
+                    if(accWrap.accSelected){
+                        accountId = accWrap.acc.Id;                        
+                    }
+                }
+                if(accountId != null){
+                    if(!string.isBlank(lstlead[0].Company)){
+                        accountRecStore.name = lstlead[0].Concept_TEXT__c+' '+lstlead[0].Company;
+                    }
+                    else{
+                        ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR,'Please Enter Company Name on Lead record.'));
+                        return null;
+                    }
+                    if(!string.isBlank(lstlead[0].phone))
+                        accountRecStore.phone = lstlead[0].phone;
+                    accountRecStore.recordTypeId = storeRecTypeId;
+                    accountRecStore.Concept_TEXT__c = lstlead[0].Concept_TEXT__c;
+                    accountRecStore.Store__c = lstlead[0].Company;
+                    accountRecStore.BillingStreet = lstlead[0].street;
+                    accountRecStore.BillingCity = lstlead[0].city;
+                    accountRecStore.BillingState = lstlead[0].state;
+                    accountRecStore.BillingCountry = lstlead[0].country;
+                    accountRecStore.BillingPostalCode = lstlead[0].postalCode;
+                    accountRecStore.Status__c = 'Prospect - Active';
+                    accountRecStore.ownerId = lstlead[0].ownerId;
+                    accountRecStore.Franchise_Organization__c = accountId;
+                    accountRecStore.ParentId = accountId;
+                    insert accountRecStore;
+                }
+            }
+            if(accountRec != null && newAccount && accountRecStore != null){
+                insert accountRec;
+                accountRecStore.Franchise_Organization__c = accountRec.Id;
+                upsert accountRecStore;
+                accountId = accountRec.Id;
+            }
+            if(newContact){         
+                contact contactRec = new contact();
+                if(!string.isBlank(firstNameVal))
+                    contactRec.firstName = firstNameVal;
+                if(!string.isBlank(lastNameVal)){
+                    contactRec.lastName = lastNameVal;              
+                }
+                else{
+                    ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR,'Please Enter Last Name.'));
+                    return null;
+                }
+                if(!string.isBlank(emailVal))
+                    contactRec.email = emailVal;
+                if(!string.isBlank(phoneVal))
+                    contactRec.phone = phoneVal;                
+                if(accountId != null)
+                    contactRec.accountId = accountId;
+                //contactRec.Ext_1__c = lstlead[0].Ext_1__c;
+                //contactRec.Ext_2__c = lstlead[0].Ext_2__c;
+                contactRec.Ext_3__c = lstlead[0].Ext_3__c;
+                contactRec.Ext_4__c = lstlead[0].Ext_4__c;
+                //contactRec.Phone_2__c = lstlead[0].Phone_2__c;
+                contactRec.Phone_3__c = lstlead[0].Phone_3__c;
+                contactRec.Phone_4__c = lstlead[0].Phone_4__c;
+                contactRec.description = lstlead[0].description;
+                //contactRec.mailingPostalCode = lstlead[0].PostalCode;
+                if(!string.isBlank(postalCodeVal))
+                    contactRec.MailingPostalCode = postalCodeVal;
+                if(!string.isBlank(lstlead[0].State))
+                    contactRec.MailingState = lstlead[0].State;                
+                contactRec.SFSSDupeCatcher__Override_DupeCatcher__c  = lstlead[0].SFSSDupeCatcher__Override_DupeCatcher__c ;
+                lstContact.add(contactRec);
+            }
+            else{
+                
+                for(contactWrapper conWrap : lstConWrapper){
+                    if(conWrap.conSelected){
+                        contactId = conWrap.con.Id;
+                        accountId = conWrap.con.accountId;
+                        boolean valChanged = false;
+                        if(string.isBlank(conWrap.con.firstName)){                            
+                            conWrap.con.firstName = firstNameVal;
+                            valChanged = true;
+                        }
+                        if(string.isBlank(conWrap.con.phone)){                            
+                            conWrap.con.phone = phoneVal;
+                            valChanged = true;
+                        }
+                        if(string.isBlank(conWrap.con.email)){
+                            conWrap.con.email = emailVal;
+                            valChanged = true;
+                        }
+                        /*if(string.isBlank(conWrap.con.Ext_1__c)){
+                            conWrap.con.Ext_1__c = lstlead[0].Ext_1__c;
+                            valChanged = true;
+                        }
+                        
+                        if(string.isBlank(conWrap.con.Ext_2__c)){
+                            conWrap.con.Ext_2__c = lstlead[0].Ext_2__c;
+                            valChanged = true;
+                        }*/
+                        if(string.isBlank(conWrap.con.Ext_3__c)){
+                            conWrap.con.Ext_3__c = lstlead[0].Ext_3__c;
+                            valChanged = true;
+                        }
+                        if(string.isBlank(conWrap.con.Ext_4__c)){
+                            conWrap.con.Ext_4__c = lstlead[0].Ext_4__c;
+                            valChanged = true;
+                        }
+                        
+                        /*if(string.isBlank(conWrap.con.Phone_2__c)){
+                            conWrap.con.Phone_2__c = lstlead[0].Phone_2__c;
+                            valChanged = true;
+                        }*/
+                        if(string.isBlank(conWrap.con.Phone_3__c)){
+                            conWrap.con.Phone_3__c = lstlead[0].Phone_3__c;
+                            valChanged = true;
+                        }
+                        if(string.isBlank(conWrap.con.Phone_4__c)){
+                            conWrap.con.Phone_4__c = lstlead[0].Phone_4__c;
+                            valChanged = true;
+                        }
+                        if(string.isBlank(conWrap.con.description)){
+                            conWrap.con.description = lstlead[0].description;
+                            valChanged = true;
+                        }
+                        if(string.isBlank(conWrap.con.mailingPostalCode)){
+                            conWrap.con.mailingPostalCode = postalCodeVal;
+                            valChanged = true;
+                        }
+                        if(valChanged)
+                            lstContact.add(conWrap.con);
+                    }
+                }
+                if(accountId != null){
+                    if(!string.isBlank(lstlead[0].Company)){
+                        accountRecStore.name = lstlead[0].Company+' '+lstlead[0].Concept_TEXT__c;
+                    }
+                    else{
+                        ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR,'Please Enter Company Name in Lead.'));
+                        return null;
+                    }
+                    if(!string.isBlank(lstlead[0].phone))
+                        accountRecStore.phone = lstlead[0].phone;
+                    accountRecStore.recordTypeId = storeRecTypeId;
+                    accountRecStore.Concept_TEXT__c = lstlead[0].Concept_TEXT__c;
+                    accountRecStore.Store__c = lstlead[0].Company;
+                    accountRecStore.BillingStreet = lstlead[0].street;
+                    accountRecStore.BillingCity = lstlead[0].city;
+                    accountRecStore.BillingState = lstlead[0].state;
+                    accountRecStore.BillingCountry = lstlead[0].country;
+                    accountRecStore.BillingPostalCode = lstlead[0].postalCode;
+                    accountRecStore.Status__c = 'Prospect - Active';
+                    accountRecStore.ownerId = lstlead[0].ownerId;
+                    accountRecStore.Franchise_Organization__c = accountId;
+                    insert accountRecStore;
+                }
+            }           
+            if(!lstContact.isEmpty() && accountId != null){
+                upsert lstContact;
+                contactId = lstContact[0].Id;
+            }
+            system.debug('@@@1__'+accountId+'__'+contactId);
+            if(accountId == null || contactId == null){
+                ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR,'Please Select Account/Contact Before Converting Lead.'));
+                return null;
+            }
+                
+            Database.LeadConvert leadCon = new database.LeadConvert();
+            leadCon.setLeadId(leadId);
+            leadCon.setAccountId(accountId);
+            leadCon.setContactId(contactId);
+            leadCon.setDoNotCreateOpportunity(true);
+            LeadStatus convertStatus = [SELECT Id, MasterLabel FROM LeadStatus WHERE IsConverted = true LIMIT 1];
+            leadCon.setConvertedStatus(convertStatus.MasterLabel);
+            
+            Database.LeadConvertResult conLead = Database.convertLead(leadCon);
+            if(conLead.isSuccess()){
+                if(accountId != null){
+                    list<account>lstAcc = [select id,billingstreet,billingCity,billingState,billingCountry from account where Id =: accountId limit 1];
+                    if(!lstAcc.isEmpty()){
+                        lstAcc[0].billingstreet = '';
+                        lstAcc[0].billingCity = '';
+                        lstAcc[0].billingCountry = '';
+                        //overwrite if blank
+                        //if(string.isblank(lstAcc[0].billingState) )
+                            //lstAcc[0].billingState
+                        if(string.isblank(lstAcc[0].billingPostalCode) )
+                        	lstAcc[0].billingPostalCode = postalCodeVal;
+                        update lstAcc[0];
+                    }
+                }
+                if(contactId != null){
+                	list<Contact>lstCon = [select id,mailingstreet,mailingCity,mailingState,mailingCountry FROM Contact WHERE Id =: contactId limit 1];
+                    if(!lstCon.isEmpty()){
+                        lstCon[0].mailingstreet = '';
+                        lstCon[0].mailingCity = '';
+                        lstCon[0].mailingCountry = '';
+                        //overwrite if blank
+                        if(string.isblank(lstCon[0].mailingPostalCode) )
+                        	lstCon[0].mailingPostalCode = PostalCodeVal;
+                        update lstCon[0];
+                    }
+                }
+                pageReference pg = new pageReference('/'+ accountId);
+                pg.setRedirect(true);
+                return pg;
+            }
+            return null;
+        }
+        catch(exception e){
+            Database.rollback(sp);
+            ApexPages.addMessage(new ApexPages.Message(ApexPages.Severity.ERROR,e.getMessage()));
+            return null;
+        }
+    }
+    public class contactWrapper{
+        public boolean conSelected{get;set;}
+        public contact con{get;set;}
+        
+        public contactWrapper(contact conRecord){
+            con = conRecord;
+            conSelected = false;
+        }
+    }
+    public class accountWrapper{
+        public boolean accSelected{get;set;}
+        public account acc{get;set;}
+        
+        public accountWrapper(account accRecord){
+            acc = accRecord;
+            accSelected = false;
+        }
+    }
+}

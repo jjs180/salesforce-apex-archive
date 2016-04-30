@@ -1,0 +1,193 @@
+<apex:page standardController="lead" extensions="DTT_convertLeadCustomController" id="pg">
+    <head>
+        <apex:includescript value="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"/>
+        <style>
+            .blurredpop{
+                display:none; 
+                position:fixed; 
+                top:0; 
+                left:0px; 
+                background-color:white; 
+                height:100%; 
+                width:100%; 
+                z-index:99999999999; 
+                opacity:0.6;
+            }
+            .blurredpopinternal{
+                display:block; 
+                text-align:center; 
+                vertical-align:middle;
+                height:auto; 
+                width:auto; 
+                position:relative; 
+                top:40%;
+                z-index:100;
+                margin:0 auto;
+            }
+            h1,h2,h3,h4,h5,h6{
+                display : block;
+            }
+            .accDiv{
+                float: right;
+                width: 90%;
+            }
+            .bPageBlock .detailList .dataCol {
+                width: auto;
+            }
+        </style>
+        <script>
+            function unselectCon(clsId){  
+                var aInputs = document.getElementsByTagName('input');
+                console.log('@@@3__'+document.getElementById("pg:frm:pb:pbb:bottom:convert_button").disabled);
+                var newContact = '';
+                for (var i=0;i<aInputs.length;i++) {
+                    if (aInputs[i].type == 'checkbox' && aInputs[i].className.indexOf('conRec') != -1 && aInputs[i].className != clsId) {
+                        aInputs[i].checked=false;
+                    }
+                    if(aInputs[i].type == 'checkbox' && aInputs[i].className.indexOf('accRec') != -1 && aInputs[i].className != clsId) {
+                        aInputs[i].checked=false;
+                    }                    
+                    console.log(aInputs[i].className);
+                    if(clsId == 'conRec'){
+                        newContact ='new'; 
+                        if(aInputs[i].type == 'checkbox' && aInputs[i].className == 'accRec') {
+                            aInputs[i].checked=true;
+                            
+                        }
+                    }
+                }
+                if(newContact == 'new'){
+                    newContactCall();
+                }
+                else{
+                    sectionDisp();
+                }
+            }
+            function unselectAcc(clsId){
+                var aInputs = document.getElementsByTagName('input');
+                for (var i=0;i<aInputs.length;i++) {
+                    if(aInputs[i].type == 'checkbox' && aInputs[i].className.indexOf('accRec') != -1 && aInputs[i].className != clsId) {
+                        aInputs[i].checked = false;
+                    }
+                }
+                sectionDisp1();
+            }
+            function DisableSearch(){
+                $(".searchBtnCls").prop('disabled', true);
+                var allValuePresent = false;
+                //console.log(allValuePresent);
+                if(document.getElementById("pg:frm:pb:pbs:firstName").value == '' || document.getElementById("pg:frm:pb:pbs:firstName").value == null){
+                    allValuePresent = true;
+                    //console.log('@@@__'+allValuePresent);
+                }
+                if(document.getElementById("pg:frm:pb:pbs:lastName").value == '' || document.getElementById("pg:frm:pb:pbs:lastName").value == null){
+                    allValuePresent = true;
+                    //console.log('@@@1__'+allValuePresent);
+                }
+                if(document.getElementById("pg:frm:pb:pbs:accountNameVal").value == '' || document.getElementById("pg:frm:pb:pbs:accountNameVal").value == null){
+                    allValuePresent = true;
+                    //console.log('@@@2__'+allValuePresent);
+                }
+                //console.log('@@__'+allValuePresent);
+                if(allValuePresent){
+                    //document.getElementById("pg:frm:pb:pbb:searchBtn").disabled = "disabled";
+                    $(".searchBtnCls").prop('disabled', true);
+                    //console.log('@@@4__'+document.getElementById("pg:frm:pb:pbb:bottom:convert_button").disabled);
+                }
+                else{
+                    //document.getElementById("pg:frm:pb:pbb:searchBtn").disabled = false;
+                    $(".searchBtnCls").prop('disabled', false);
+                    //console.log('@@@5__'+document.getElementById("pg:frm:pb:pbb:searchBtn").disabled);
+                }
+            }
+            function addVal(){
+                var accValue = '';
+                if(document.getElementById("pg:frm:pb:pbs:firstName").value != '' && document.getElementById("pg:frm:pb:pbs:firstName").value != null){
+                    accValue = document.getElementById("pg:frm:pb:pbs:firstName").value;
+                }
+                if(document.getElementById("pg:frm:pb:pbs:lastName").value != '' && document.getElementById("pg:frm:pb:pbs:lastName").value != null){
+                    accValue = accValue + ' ' + document.getElementById("pg:frm:pb:pbs:lastName").value;
+                }
+                if(accValue != null && accValue != ''){
+                    document.getElementById("pg:frm:pb:pbs:accountNameVal").value = accValue + ' Corp';
+                }
+                return false;
+            }
+            $(document).ready(function(){
+                DisableSearch();
+            });
+        </script>
+    </head>
+    <apex:form id="frm">
+        <div id="blurred" class="blurredpop">
+            <!-- status bar popup starts here --> 
+            <div id="load" class="blurredpopinternal">
+                <img src="{!URLFOR($Resource.loading)}"/>
+            </div>
+        </div> 
+        <apex:pageMessages id="pgMsg"/>
+        <apex:actionFunction name="newContactCall" action="{!updateResults}" rerender="pgMsg,frm" status="statusimage"/>
+        <apex:actionFunction name="sectionDisp" action="{!sectionDisp}" rerender="pgMsg,frm" status="statusimage"/>
+        <apex:actionFunction name="sectionDisp1" action="{!sectionDisp1}" rerender="pgMsg,frm" status="statusimage"/>
+        <apex:actionStatus onstart="document.getElementById('blurred').style.display='block';" onstop="document.getElementById('blurred').style.display='none';"  id="statusimage"/>
+        <apex:pageblock id="pb">
+            <apex:pageblockSection id="pbs">
+                <apex:outputText value="First Name" />
+                <apex:inputText value="{!firstNameVal}" id="firstName" onblur="DisableSearch();" size="50"/>
+                <apex:outputText value="Last Name"/>
+                <apex:inputText value="{!lastNameVal}" id="lastName" onblur="DisableSearch();"  size="50" >
+                
+                </apex:inputText>
+                <apex:outputText value="Email"/>
+                <apex:inputText value="{!emailVal}" id="emailVal"  size="50"/>                
+                <apex:outputText value="Phone"/>
+                <apex:inputText value="{!phoneVal}" id="phoneVal"  size="50"/>
+                <apex:outputText value="Account Name"/>
+                <apex:inputText value="{!accountNameVal}" id="accountNameVal" onblur="DisableSearch();" onfocus="addVal();"  size="50"/>
+                <apex:outputText value="Postal Code"/>
+                <apex:inputText value="{!postalCodeVal}" id="postalCodeVal"  size="50"/>
+                <apex:outputText value="Concept"/>
+                <apex:inputText value="{!conceptVal}" id="conceptVal"  size="50"/>
+            </apex:pageblockSection>
+            <apex:pageBlockButtons id="pbb">
+                <apex:commandButton value="Search" action="{!updateResults}" reRender="pgMsg,frm" status="statusimage" id="searchBtn" styleClass="searchBtnCls"/>
+                <apex:commandButton value="Cancel" action="{!cancel}" style="margin-left:5%;" status="statusimage"/>
+                <apex:commandButton value="Convert" action="{!convert}" style="margin-left:5%;" status="statusimage" id="convert_button" styleClass="convertBtnCls" disabled="{!!covertEnable}"/>
+            </apex:pageBlockButtons>
+        </apex:pageblock>
+        <apex:pageBlock id="pb1">
+            <apex:inputCheckbox value="{!newContact}" styleClass="conRec" onclick="unselectCon('conRec');"/><apex:outputText value="Create New Contact"/><br/><br/>
+            <apex:outputText value="or Select Possible Matches Below : "/>
+            <apex:variable value="{!0}" var="classvar"/>
+            <apex:pageBlockTable value="{!lstConWrapper}" var="conRec">
+                <apex:column >
+                    <apex:inputCheckbox value="{!conRec.conSelected}" styleClass="conRec{!classvar}" onclick="unselectCon('conRec{!classvar}');"/>
+                    <apex:variable var="classvar" value="{!classvar+ 1}"/>
+                </apex:column>
+                <apex:column value="{!conRec.con.firstname}"/>
+                <apex:column value="{!conRec.con.lastName}"/>
+                <apex:column value="{!conRec.con.email}"/>
+                <apex:column value="{!conRec.con.phone}"/>
+                <apex:column value="{!conRec.con.Account.Name}"/>
+                <apex:column value="{!conRec.con.Account.BillingPostalCode}"/>
+                <apex:column value="{!conRec.con.Account.Concept_TEXT__c}"/>
+            </apex:pageBlockTable>
+        </apex:pageBlock>
+        <div class="accDiv">
+        <apex:pageBlock id="pb2" rendered="{!newContact}">
+            <apex:inputCheckbox value="{!newAccount}" styleClass="accRec" onclick="unselectAcc('accRec');"/><apex:outputText value="Create New Account"/><br/><br/>
+            <apex:outputText value="or Select Possible Matches Below : "/>
+            <apex:variable value="{!0}" var="accVar"/>
+            <apex:pageBlockTable value="{!lstAccountWrapper}" var="accRec">                
+                <apex:column >
+                    <apex:inputCheckbox value="{!accRec.accSelected}" styleClass="accRec{!accVar}" onclick="unselectAcc('accRec{!accVar}');"/>
+                    <apex:variable var="accVar" value="{!accVar+ 1}"/>
+                </apex:column>
+                <apex:column value="{!accRec.acc.name}"/>
+                <apex:column value="{!accRec.acc.BillingPostalCode}"/>
+                <apex:column value="{!accRec.acc.Concept_TEXT__c}"/>                
+            </apex:pageBlockTable>
+        </apex:pageBlock>
+        </div>
+    </apex:form>
+</apex:page>
