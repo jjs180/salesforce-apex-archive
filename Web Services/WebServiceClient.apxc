@@ -1,0 +1,438 @@
+public virtual class WebServiceClient
+{
+	public class WebServiceSettings
+	{
+		public String sHttpOrHttps { get; private set; }
+		public String sHostname { get ; private set; }
+		public String sPort { get; private set; }
+		public String sAuthHeader { get; set; }
+		public String sURIGetRecord { get; private set; }
+		public String sURICreateUpdateRecord { get; private set; }
+		public String sURIDeleteRecord { get; private set; }
+		
+		public WebServiceSettings(String httpOrHttps, String hostname, String port, String authHeader,
+								  String uriGetRecord, String uriCreateUpdateRecord, String uriDeleteRecord)
+		{
+	  		sHttpOrHttps = httpOrHttps;
+	  		sHostname = hostname;
+	  		sPort = port;
+	  		sAuthHeader = authHeader;
+	  		sURIGetRecord = uriGetRecord;
+	  		sURICreateUpdateRecord = uriCreateUpdateRecord;
+	  		sURIDeleteRecord = uriDeleteRecord;
+		}
+		
+	}
+	
+	public enum HttpMethod {
+		GET, POST, DELETE_X, PUT
+	}
+
+	public static final Integer HTTP_RESP_SC_OK							= 200;
+	public static final Integer HTTP_RESP_SC_BAD_REQUEST				= 400;
+	public static final Integer HTTP_RESP_SC_UNAUTHORIZED				= 401;
+	public static final Integer HTTP_RESP_SC_FORBIDDEN					= 403;
+	public static final Integer HTTP_RESP_SC_NOT_FOUND					= 404;
+	public static final Integer HTTP_RESP_SC_METHOD_NOT_ALLOWED			= 405;
+	public static final Integer HTTP_RESP_SC_UNSUPPORTED_MEDIA_TYPE		= 415;
+	public static final Integer HTTP_RESP_SC_INTERNAL_SERVER_ERROR		= 500;
+	public static final Integer HTTP_RESP_SC_SERVICE_UNAVAILABLE		= 503;
+
+	public enum WS_ORG_ENVIRONMENT {
+		DefaultSettings,
+		Development,
+		Sandbox,
+		Production
+	}
+
+	private static final Integer DEFAULT_REQUEST_TIMEOUT = 60000; // 60 seconds
+	
+	protected WebServiceSettings wsSettings;
+	
+	private String sGetRecordAsyncCallRequestLabel;
+	private String sGetRecordAsycResult;
+	
+//----------------------------------- Begin Public Methods -----------------------------------------------------------------
+
+	public WebServiceClient(WebServiceSettings settings)
+	{
+		wsSettings = settings;
+	}
+	
+	public String getAuthHeader() { return wsSettings.sAuthHeader; }
+	public String getURIGetRecord() { return wsSettings.sURIGetRecord; }
+	public String getURICreateUpdateRecord() { return wsSettings.sURICreateUpdateRecord; }
+	
+	public HttpResponse getRecord(Map<String, String> queryParameters)
+	{
+        return sendRequest(HttpMethod.GET, wsSettings.sAuthHeader, buildEndpoint(wsSettings.sURIGetRecord), null, queryParameters, null);
+	}
+	
+	public HttpResponse post(Object requestBody)
+	{
+		return sendRequest(HttpMethod.POST, wsSettings.sAuthHeader, buildEndpoint(wsSettings.sURICreateUpdateRecord), null, null, requestBody);
+	}
+
+	public HttpResponse createRecord(List<String> pathParams, String sRequestBody, String sURI)
+	{
+		return sendRequest(HttpMethod.POST, wsSettings.sAuthHeader, buildEndpoint(sURI), pathParams, null, sRequestBody);
+	}
+
+	public HttpResponse createRecord(List<String> pathParams, Attachment attachment)
+	{
+		return sendRequest(HttpMethod.POST, wsSettings.sAuthHeader, buildEndpoint(wsSettings.sURICreateUpdateRecord), pathParams, null, attachment);
+	}
+
+	public HttpResponse createRecord(List<String> pathParams, Attachment attachment, String sURI)
+	{
+		return sendRequest(HttpMethod.POST, wsSettings.sAuthHeader, buildEndpoint(sURI), pathParams, null, attachment);
+	}
+
+	public HttpResponse updateRecord(List<String> pathParams, String sRequestBody, String sURI)
+	{
+		return sendRequest(HttpMethod.PUT, wsSettings.sAuthHeader, buildEndpoint(sURI), pathParams, null, sRequestBody);
+	}
+
+	public HttpResponse deleteRecord(List<String> pathParams)
+	{
+        return sendRequest(HttpMethod.DELETE_X, wsSettings.sAuthHeader, buildEndpoint(wsSettings.sURIDeleteRecord), pathParams, null, null);
+	}
+	
+	public HttpResponse deleteRecord(List<String> pathParams, String sURI)
+	{
+        return sendRequest(HttpMethod.DELETE_X, wsSettings.sAuthHeader, buildEndpoint(sURI), pathParams, null, null);
+	}
+	
+	/*public HttpResponse getRecordAsync(HttpMethod method, String sRecordType, String recordId)
+	{
+        Map<String, String> paramValues = new Map<String, String>();
+        paramValues.put('recordtype', sRecordType);
+        paramValues.put('id', recordId);
+        
+        return sendRequest(method, sAuthHeader, buildEndpoint(sURIGetRecord), paramValues);
+	}
+	
+	public Object processGetRecordAsync()
+	{
+		// Get the response by using the unique label
+      	HttpResponse response = Continuation.getResponse(this.sGetRecordAsyncCallRequestLabel);
+      
+      	// Set the result variable that is displayed on the Visualforce page
+      	this.sGetRecordAsycResult = response.getBody();
+      	System.debug('+++++WebServiceClient.processGetRecordAsync.  Callback response=' + sGetRecordAsycResult);
+
+      	// ??Return null to re-render the original Visualforce page
+		return null;
+	}
+	
+	public String getRecordAsyncResult() { return sGetRecordAsycResult; }
+	
+	public HttpResponse createUpdateRecord(HttpMethod method, String sRecordType, Map<String, String> paramValues)
+	{
+		paramValues.put('recordtype', sRecordType);
+		return sendRequest(method, sAuthHeader, buildEndpoint(sURICreateUpdateRecord), null, paramValues, null);
+	}
+	
+	@future(callout=true)
+	public static void createUpdateRecordAsync(String sHttpMethod, String sAuthHeader, String sURI, String sRecordType, Map<String, String> paramValues)
+	{
+		HttpMethod method = getMethod(sHttpMethod);
+		paramValues.put('recordtype', sRecordType);
+		HttpResponse res = sendRequest(method, sAuthHeader, sURI, null, paramValues, null);
+	}
+	
+	@future(callout=true)
+	public static void createUpdateRecordAsync(String sHttpMethod, String sAuthHeader, String sURI, String JsonRequestBody)
+	{
+		HttpMethod method = getMethod(sHttpMethod);
+		HttpResponse res = sendRequest(method, sAuthHeader, sURI, null, null, JsonRequestBody);
+	}
+	
+	public HttpResponse searchRecord(HttpMethod method, String sRecordType, Map<String, String> filters, String filterOperator, List<String> columns)
+	{
+		Map<String, String> paramValues = new Map<String, String>();
+		paramValues.put('recordtype', sRecordType);
+		
+		for(String s:filters.keySet())
+		{
+			paramValues.put('searchfilter_' + s, filters.get(s));
+		}
+		
+		paramValues.put('searchfilteroperator', filterOperator);
+		
+		Integer i = 1;
+		for(String s:columns)
+		{
+			paramValues.put('searchcolumn' + i, s);
+			i++;
+		}
+		
+		return sendRequest(method, sAuthHeader, sURISearchRecord, paramValues);
+	}*/
+
+	/**
+	 * Converts HTTP method from string to enum
+	 * @param sHttpMethod valid values (case insensitive) are get, post, delete
+	 */
+	public static HttpMethod getMethod(String sHttpMethod)
+	{
+		HttpMethod method;
+		for(HttpMethod m: HttpMethod.values())
+		{
+			String sName = m.name().toLowerCase().replace('_x', '');
+		    if(sName == sHttpMethod.toLowerCase())
+		    {
+		        method = m;
+		        break;
+		    }
+		}
+		
+		return method;
+	}
+	
+	public static String stripJsonNulls(String JsonString)
+    {
+
+    	if(JsonString != null)   	
+    	{
+			JsonString = JsonString.replaceAll('\"[^\"]*\":null',''); //basic removal of null values
+			//JsonString = JsonString.replaceAll(Ô\Ó[^\Ó]*\Ó *: *null *, *Õ,Ó);
+			JsonString = JsonString.replaceAll('\"[^\"]*\" *: *null *, *',''); //basic removeal of null values, including any spaces before/after colon/comma
+			JsonString = JsonString.replaceAll(',{2,}', ','); //remove duplicate/multiple commas
+			JsonString = JsonString.replace('{,', '{'); //prevent opening brace from having a comma after it
+			JsonString = JsonString.replace(',}', '}'); //prevent closing brace from having a comma before it
+			JsonString = JsonString.replace('[,', '['); //prevent opening bracket from having a comma after it
+			JsonString = JsonString.replace(',]', ']'); //prevent closing bracket from having a comma before it
+    	}
+  	
+		return JsonString;
+    }
+   	
+	
+//----------------------------------- End Public Methods -----------------------------------------------------------------
+
+//----------------------------------- Begin Private and Protected Methods ------------------------------------------------
+
+	protected String buildEndpoint(String sURI)
+	{
+		String sCurPort = '';
+		if(wsSettings.sPort != null) sCurPort = ':' + wsSettings.sPort;
+		
+		return wsSettings.sHttpOrHttps + '://' + wsSettings.sHostname + sCurPort + sURI;
+	}
+	
+	protected String formatPathParams(String s)
+	{
+		//return s.replaceAll('[ /%*"\'\\\\]', '_');
+		if(s == null) return s;
+		else return EncodingUtil.urlEncode(s.replaceAll('[/%*"\'\\\\]', '_'), 'UTF-8');
+	}
+
+    private static HttpResponse sendRequest(HttpMethod method, String sAuthHeader, String sURI, List<String> pathParams, Map<String, String> queryOrFormParams, Object requestBody)
+    {
+    	Time startTime = DateTime.now().time();
+    	
+        //Construct HTTP request and response
+        HttpRequest req = new HttpRequest();
+        HttpResponse resp = new HttpResponse();
+        Http http = new Http();
+        String responseBody;
+        
+        //Construct Authorization and Content header
+        if(sAuthHeader != null) req.setHeader('Authorization', sAuthHeader);
+        
+        //if(method == HttpMethod.POST || HttpMethod.PUT) req.setHeader('Content-Type','application/x-www-form-urlencoded');
+        //else req.setHeader('Content-Type','application/json');
+        //req.setHeader('Content-Type','application/json');
+        
+        req.setHeader('Connection','keep-alive');
+        req.setTimeout(DEFAULT_REQUEST_TIMEOUT);
+ 
+ 		// Set path parameters for endpoint
+        String newEndpoint = sURI;
+        String JsonBody;
+        if(pathParams != null)
+        {
+        	for(String s:pathParams)
+        	{
+        		newEndpoint += '/' + s;
+        	}
+        }
+        
+        // Set request body and query parameters
+        if(requestBody instanceof Attachment)
+        {
+        	Attachment attach = (Attachment) requestBody;
+        	updateRequest(req, attach.Body, attach.Name);
+        } else {
+	        if(method == HttpMethod.GET)
+	        {
+				if(queryOrFormParams != null)
+				{
+					for(String sParam:queryOrFormParams.keySet())
+					{
+						String sValue = queryOrFormParams.get(sParam);
+						newEndpoint += '&' + sParam + '=' + EncodingUtil.urlEncode(sValue, 'UTF-8');
+					}
+				}
+	        } else if(requestBody instanceof String) {
+	        	JsonBody = (String) requestBody; // already a JSON string
+	        } else if(requestBody != null) {
+	        	JsonBody = JSON.serialize(requestBody, true);
+	        	System.debug('++++++++WebServiceClient.sendRequest.  JSON request body=' + JSON.serializePretty(requestBody, true));
+	        }
+
+	        if((method == HttpMethod.POST || method == HttpMethod.PUT) && JsonBody != null)
+	        {
+	        	req.setHeader('Content-Type', 'application/json');
+	        	//System.debug('+++++++++++WebServiceClient.  Before stripping nulls for JSON string=' + JsonBody);
+	        	//JsonBody = stripJsonNulls(JsonBody).replace('"class_x":', '"class":').replace('"currency_x":', '"currency":');
+	        	JsonBody = JsonBody.replace('"class_x":', '"class":').replace('"currency_x":', '"currency":');
+	        	//System.debug('+++++++++++WebServiceClient.  After stripping nulls for JSON string=' + JsonBody);
+	        	req.setBody(JsonBody);
+	        }
+        }
+ 
+        //Set Method, Port, Endpoint
+        req.setMethod(method.Name().replace('_X', ''));
+        //only for SSL client certificate login method: req.setClientCertificateName(certDevName);
+        req.setEndpoint(newEndpoint);
+ 
+ 		Time endTime = DateTime.now().time();
+ 		System.debug('+++++++++WebServiceClient.sendRequest elapsed seconds before HTTP send: ' + getElapsedTime(startTime, endTime));
+ 		
+		//to pass the apex test
+        if (!Test.isRunningTest()){
+            try {
+				//Send endpoint to web service server
+				System.debug('++++++++WebServiceClient.sendRequest.  request=' + req);
+               	resp = http.send(req);
+               	System.debug('++++++++WebServiceClient.sendRequest.  Http response=' + resp + ', status=' + resp.getStatus() + ', statusCode=' + resp.getStatusCode());
+				responseBody = resp.getBody();
+            } catch(System.CalloutException e) {
+            	System.debug('+++++++WebServiceClient.sendRequest.  Exception: ' + e);
+               	System.debug('++++++++WebServiceClient.sendRequest.  Exception.  Http response=' + resp + ', status=' + resp.getStatus() + ', statusCode=' + resp.getStatusCode() + ', responseBody=' + resp.getBody());
+				responseBody = resp.getBody();
+            }
+        }
+		//else if test is running
+        else {
+	        // dummy data
+	        resp = new HttpResponse();
+	        resp.setStatusCode(200);
+	        responseBody = 'OK';
+	        resp.setBody(responseBody);
+        }
+        
+        endTime = DateTime.now().time();
+        System.debug('+++++++WebServiceClient.sendRequest.  Elapsed seconds after HTTP send=' + getElapsedTime(startTime, endTime));
+        //System.debug('+++++++WebServiceClient.sendRequest.  HTTP response body=' + responseBody + ', endpoint=' + newEndpoint + ', request body=' + JsonBody);
+        //for(String s:resp.getHeaderKeys())
+        //{
+        //	if(s != null) System.debug('+++++++WebServiceClient.sendRequest.  Response header name=' + s + ', value=' + resp.getHeader(s));
+        //}
+        
+        return resp;
+	}
+	
+   	private static Time getElapsedTime(Time startTime, Time endTime)
+	{
+	    if(startTime == null || endTime == null)
+	        return Time.newInstance(0, 0, 0, 0);
+	
+	    Integer elapsedHours = endTime.hour() - startTime.hour();
+	    Integer elapsedMinutes = endTime.minute() - startTime.minute();
+	    Integer elapsedSeconds = endTime.second() - startTime.second();
+	    Integer elapsedMiliseconds = endTime.millisecond() - startTime.millisecond();
+	
+	    return Time.newInstance(elapsedHours, elapsedMinutes, elapsedSeconds, elapsedMiliseconds);
+	}
+
+    private static void updateRequest(HttpRequest request, Blob file_body, String file_name)
+	{
+      // Repost of code  with fix for file corruption issue
+      // Orignal code postings and explanations
+      // http://enreeco.blogspot.in/2013/01/salesforce-apex-post-mutipartform-data.html
+      // http://salesforce.stackexchange.com/questions/24108/post-multipart-without-base64-encoding-the-body
+      // Additional changes commented GW: that fix issue with occasional corruption of files
+      String boundary = '----------------------------741e90d31eff';
+      String header = '--'+boundary+'\nContent-Disposition: form-data; name="file"; filename="'+file_name+'";\nContent-Type: application/octet-stream';
+      // GW: Do not prepend footer with \r\n, you'll see why in a moment
+      // String footer = '\r\n--'+boundary+'--'; 
+      String footer = '--'+boundary+'--';             
+      String headerEncoded = EncodingUtil.base64Encode(Blob.valueOf(header+'\r\n\r\n'));
+      while(headerEncoded.endsWith('='))
+      {
+       header+=' ';
+       headerEncoded = EncodingUtil.base64Encode(Blob.valueOf(header+'\r\n\r\n'));
+      }
+      String bodyEncoded = EncodingUtil.base64Encode(file_body);
+      // GW: Do not encode footer yet
+      // String footerEncoded = EncodingUtil.base64Encode(Blob.valueOf(footer));
+ 
+      Blob bodyBlob = null;
+      String last4Bytes = bodyEncoded.substring(bodyEncoded.length()-4,bodyEncoded.length());
+ 
+      // GW: Replacing this entire section
+      /*
+      if(last4Bytes.endsWith('='))
+      {
+           Blob decoded4Bytes = EncodingUtil.base64Decode(last4Bytes);
+           HttpRequest tmp = new HttpRequest();
+           tmp.setBodyAsBlob(decoded4Bytes);
+           String last4BytesFooter = tmp.getBody()+footer;   
+           bodyBlob = EncodingUtil.base64Decode(headerEncoded+bodyEncoded.substring(0,bodyEncoded.length()-4)+EncodingUtil.base64Encode(Blob.valueOf(last4BytesFooter)));
+      }
+      else
+      {
+            bodyBlob = EncodingUtil.base64Decode(headerEncoded+bodyEncoded+footerEncoded);
+      }
+      */
+     // GW: replacement section to get rid of padding without corrupting data
+     if(last4Bytes.endsWith('==')) {
+        // The '==' sequence indicates that the last group contained only one 8 bit byte
+        // 8 digit binary representation of CR is 00001101
+        // 8 digit binary representation of LF is 00001010
+        // Stitch them together and then from the right split them into 6 bit chunks
+        // 0000110100001010 becomes 0000 110100 001010
+        // Note the first 4 bits 0000 are identical to the padding used to encode the
+        // second original 6 bit chunk, this is handy it means we can hard code the response in
+        // The decimal values of 110100 001010 are 52 10
+        // The base64 mapping values of 52 10 are 0 K
+        // See http://en.wikipedia.org/wiki/Base64 for base64 mapping table
+        // Therefore, we replace == with 0K
+        // Note: if using \n\n instead of \r\n replace == with 'oK'
+        last4Bytes = last4Bytes.substring(0,2) + '0K';
+        bodyEncoded = bodyEncoded.substring(0,bodyEncoded.length()-4) + last4Bytes;
+        // We have appended the \r\n to the Blob, so leave footer as it is.
+        String footerEncoded = EncodingUtil.base64Encode(Blob.valueOf(footer));
+        bodyBlob = EncodingUtil.base64Decode(headerEncoded+bodyEncoded+footerEncoded);
+      } else if(last4Bytes.endsWith('=')) {
+        // '=' indicates that encoded data already contained two out of 3x 8 bit bytes
+        // We replace final 8 bit byte with a CR e.g. \r
+        // 8 digit binary representation of CR is 00001101
+        // Ignore the first 2 bits of 00 001101 they have already been used up as padding
+        // for the existing data.
+        // The Decimal value of 001101 is 13
+        // The base64 value of 13 is N
+        // Therefore, we replace = with N
+        // Note: if using \n instead of \r replace = with 'K'
+        last4Bytes = last4Bytes.substring(0,3) + 'N';
+        bodyEncoded = bodyEncoded.substring(0,bodyEncoded.length()-4) + last4Bytes;
+        // We have appended the CR e.g. \r, still need to prepend the line feed to the footer
+        footer = '\n' + footer;
+        String footerEncoded = EncodingUtil.base64Encode(Blob.valueOf(footer));
+        bodyBlob = EncodingUtil.base64Decode(headerEncoded+bodyEncoded+footerEncoded);              
+      } else {
+        // Prepend the CR LF to the footer
+        footer = '\r\n' + footer;
+        String footerEncoded = EncodingUtil.base64Encode(Blob.valueOf(footer));
+        bodyBlob = EncodingUtil.base64Decode(headerEncoded+bodyEncoded+footerEncoded);  
+      }
+ 
+      request.setHeader('Content-Type','multipart/form-data; boundary='+boundary);
+      request.setBodyAsBlob(bodyBlob);
+      request.setTimeout(120000);
+	}
+
+}

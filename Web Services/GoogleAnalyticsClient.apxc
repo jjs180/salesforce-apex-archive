@@ -1,0 +1,597 @@
+public with sharing class GoogleAnalyticsClient extends WebServiceClient
+{
+	// ----------- Request classes sent to Google Analytics -----------------
+	public class RequestParams
+	{
+		Date			startDate;
+		Date			endDate;
+		List<String>	expressions;
+		List<String>	dimensions;
+	}
+	public class GA_Request
+	{
+		public List<GA_ReportRequest> reportRequests;
+	}
+	public class GA_ReportRequest
+	{
+		public String				viewId;
+		public List<GA_DateRange>	dateRanges;
+		public List<GA_MetricExpression>	metrics;
+		public List<GA_Dimension>	dimensions;
+	}
+	public class GA_DateRange
+	{
+		public String startDate;
+		public String endDate;
+	}
+	public class GA_MetricExpression
+	{
+		public String expression;
+	}
+	public class GA_Dimension
+	{
+		public String name;
+	}
+	
+	// ------------------------------------------------------------------------
+	// ----------- Result classes from returned response ----------------------
+
+	public class GA_R_Result
+	{
+		public List<GA_R_Report> reports;
+	}
+	public class GA_R_Report
+	{
+		public GA_R_ColumnHeader	columnHeader;
+		public GA_R_Data			data;
+	}
+	public class GA_R_ColumnHeader
+	{
+		public GA_R_MetricHeader	metricHeader;
+	}
+	public class GA_R_MetricHeader
+	{
+		public List<GA_R_MetricHeaderEntry>	metricHeaderEntries;
+	}
+	public class GA_R_MetricHeaderEntry
+	{
+		public String name;
+		public String type;
+	}
+	public class GA_R_Data
+	{
+		Boolean 					isDataGolden;
+		List<GA_R_DateRangeValues>	maximums;
+		List<GA_R_DateRangeValues>	minimums;
+		Integer						rowCount;
+		List<GA_R_ReportRow>		rows;
+		List<GA_R_DateRangeValues>	totals;
+	}
+	public class GA_R_ReportRow
+	{
+		List<String>				dimensions;
+		List<GA_R_DateRangeValues>	metrics;
+	}
+	public class GA_R_DateRangeValues
+	{
+		public List<String>	values;
+	}
+	
+	// ------------------------------------------------------------------------
+	// ------------------ Variable Declarations -------------------------------
+	
+    // GA date values
+    public static Integer MAX_DATERANGES_PER_REQUEST 		= 2;
+    public static final String GA_DATE_FORMAT 				= 'yyyy-MM-dd';
+    public static final String GA_DATE_TODAY 				= 'today';
+    public static final String GA_DATE_YESTERDAY 			= 'yesterday';
+    public static final String GA_DATE_daysAgo 				= 'daysAgo';
+    
+    //----------------------
+    // GA Dimensions
+    public static final Integer MAX_DIMENSIONS_PER_REQUEST 	= 7;
+    
+    public static final String DIM_GEO_NETWORK_COUNTRY			= 'ga:country'; // STRING
+    public static final String DIM_GEO_NETWORK_REGION			= 'ga:region'; // STRING
+    public static final String DIM_GEO_NETWORK_METRO			= 'ga:metro'; // STRING
+    public static final String DIM_GEO_NETWORK_CITY				= 'ga:city'; // STRING
+    
+    public static final String DIM_PAGE_TRACK_PATH 				= 'ga:pagePath'; // STRING
+    public static final String DIM_PAGE_TRACK_PATH_L1			= 'ga:pagePathLevel1'; // STRING
+    public static final String DIM_PAGE_TRACK_PATH_L2			= 'ga:pagePathLevel2'; // STRING
+    public static final String DIM_PAGE_TRACK_PATH_L3			= 'ga:pagePathLevel3'; // STRING
+    public static final String DIM_PAGE_TRACK_PATH_L4			= 'ga:pagePathLevel4'; // STRING
+    public static final String DIM_PAGE_TRACK_TITLE				= 'ga:pageTitle'; // STRING
+    
+    public static final String DIM_LIFETIME_VAL_COHORTS_ACQ_TRAF_CHAN	= 'ga:acquisitionTrafficChannel';
+    
+    //----------------------
+    // GA metric expressions
+    public static final Integer MAX_METRICS_PER_REQUEST 		= 10;
+    
+    public static final String METRIC_USER_TOTAL				= 'ga:users'; // INTEGER
+    public static final String METRIC_USER_NEW					= 'ga:newUsers'; // INTEGER
+    public static final String METRIC_USER_PERCENT_NEW_SESS		= 'ga:percentNewSessions'; // PERCENT ga:newUsers / ga:sessions
+    public static final String METRIC_USER_1DAY					= 'ga:1dayUsers'; // INTEGER
+    public static final String METRIC_USER_7DAY					= 'ga:7dayUsers'; // INTEGER
+    public static final String METRIC_USER_14DAY				= 'ga:14dayUsers'; // INTEGER
+    public static final String METRIC_USER_30DAY				= 'ga:30dayUsers'; // INTEGER
+    public static final String METRIC_USER_SESS_PER				= 'ga:sessionsPerUser'; // INTEGER
+
+    public static final String METRIC_SESSION_TOTAL				= 'ga:sessions'; // INTEGER
+    public static final String METRIC_SESSION_BOUNCES			= 'ga:bounces'; // INTEGER
+    public static final String METRIC_SESSION_BOUNCE_RATE		= 'ga:bounceRate'; // PERCENT ga:bounces / ga:sessions
+    public static final String METRIC_SESSION_AVE_DURATION		= 'ga:avgSessionDuration'; // TIME seconds
+    public static final String METRIC_SESSION_DURATION			= 'ga:sessionDuration'; // TIME ga:sessionDuration / ga:sessions
+    public static final String METRIC_SESSION_HITS				= 'ga:hits';
+    
+    public static final String METRIC_TRAFFIC_REFERRAL_PATH		= 'ga:referralPath'; // STRING
+    public static final String METRIC_TRAFFIC_FULL_REFERRER		= 'ga:fullReferrer'; // STRING
+    public static final String METRIC_TRAFFIC_CAMPAIGN			= 'ga:campaign'; // STRING
+    public static final String METRIC_TRAFFIC_SRC				= 'ga:source'; // STRING
+    public static final String METRIC_TRAFFIC_MEDIUM			= 'ga:medium'; // STRING
+    public static final String METRIC_TRAFFIC_SOURCE_MEDIUM		= 'ga:sourceMedium'; // STRING
+    public static final String METRIC_TRAFFIC_KEYWORD			= 'ga:keyword'; // STRING
+    public static final String METRIC_TRAFFIC_AD_CONTENT		= 'ga:adContent'; // STRING
+    public static final String METRIC_TRAFFIC_SOCIAL_NET		= 'ga:socialNetwork'; // STRING
+    public static final String METRIC_TRAFFIC_SOCIAL_SRC_REFERRAL	= 'ga:hasSocialSourceReferral'; // STRING
+    public static final String METRIC_TRAFFIC_CAMPAIGN_CODE			= 'ga:campaignCode'; // STRING
+    public static final String METRIC_TRAFFIC_ORGANIC_SEARCHS		= 'ga:organicSearches'; // INTEGER
+    
+    public static final String METRIC_PAGE_TRACK_PAGE_VIEWS 			= 'ga:pageviews'; // INTEGER
+    public static final String METRIC_PAGE_TRACK_PAGE_VIEWS_PER_SESSION	= 'ga:pageviewsPerSession'; // FLOAT/DOUBLE
+    
+    //----------------------
+    
+	// From test google API account
+    //private static final String PRIVATE_KEY_TEST = '-----BEGIN PRIVATE KEY-----MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCL/bkKb8BhYWGWjkFh4QOjLDCfXvVB3QM5FXD6Fsi6QJ0DNBPP7NOg4qa0ig3Xao14Kud5//BKdqycDlWWfkllcA02aiF2a3TRgFeP+Z4Xgdba6aptuy3M3OJZ2Bz8jjrCoX6YKXvmtkUPACY9RMe2gSBgyUjTl/2jFF2bDoaIlvg6xyM2DhcXrCxHcbJZLHLioeVuZ2vvVpoM5UMsVHxFyxi9M0ailWUeqF0iEGkcsWQAkHDsHNovE+OY6iJ58dqS6Vh3cREYmlp1/fx2nsvmbMHHxFvmEgJztDwkLasDjRXaxKaCNHyXz1y5ZUgV68OOUJno7G2lieATc3sdRIJrAgMBAAECggEAUiCX3jeRdY/b4Ke0U+feamwSWm0rFWjD60lY7l9Pg3VEqAx1UxZtUYWmp2QWmro4JLeG9VvhbM4SlbsTGycbiBckqTe6Se7gqcfRlvWqecACfIt5IMcfJ4CuimbvGnuWnXiA/GPZ/JASE6rSxD8Fq1w10pJD117jvjjEcaMj6h1GmhE/yJC9vrU5WkaY9VG1g8Axhw0bFGXem0p4groDYqVvPUMAm4k24cJglI6uTLk0X0hZNd9FDIGWYyjhv+wbN+z0xskmW5mXLhM2A4prHkES3ktt7k3mzf8PsQ1KRXai1/voxBYsTVRUVYL4GrWyWQ6M41orfIEfzmjwffWNAQKBgQDejyqyJCWBIoTIESEJ6EO9qchAGFlUU0ZzcgNuJNrPL9f3bchNjcrFUgHIExsMCLaTEzqUZb4/LlepO1GD0C2Xc++/3iNAUfyL1TW1KZv3Nja+ZOJcjZLSCnDSGkgx8f4Op0VhgPv+P3qdtGiuczwLZ7YlZCdg5ol2CbyqW552eQKBgQChBonW2cMLQTLzLvbva2efqnvBMx8EUSnpcnINnf2GHeGKHwlnCJTPBvgr3RsOszKGneIcB9uaZEzGUatWRK49+wTN1za3futzmO+rLy3F0opGFJeOP7PIWvLj6YfBLGYrpRH2ED+8N7pC8u8WFQLxDEiZDAUw0QdBxXl1n9ZXAwKBgEtFVmZbbUfIeeoESQ1FvatmwbBTy9qGM5yV4e0dj9dk0gD/4y+/leW4f5vAQnSGeeEyLqzD4F0T+lflFQOko9bGQj69DWUSlXxhhsGXqgUpE8i+7APrac2Z9GBKvUIPGyKvlfqNGiz6ISk3O/RMSvF8iREKV3shXTpLvsBLLkPZAoGAOt7BFiOXA05a6j2JWg7SW7VgeUnPVSy3PfnxaLkSLy5NfsnKDjk87lOF98NmWQF6v2yJdeYJi3CQARFqqqeBbHeRUhAUmRF101Veih89hM1scCKnJgJ0IBPgKSL/1sf8sogvAN7/7jgRiNh4QIJ+CNKM2Cdk3mwNUyZ3OWGuYzECgYEAkFVC4g7aB0aqJ58oYUms8ItTDffhZERCV+BvfxN1fzGXPJ5e1jUQakgJGwEI7Sl2iJ7NswkvG9U35G9xbZImhhNBvFK/2UR4avxr/gwyH5IAxFIqeyeOqibAvvuAdJdjqFItrMSjqubS6lzLGYzDt+KIPpjFszzM3YWTaDmSYQ4=-----END PRIVATE KEY-----';
+    //private static final String SERVICE_ACCOUNT_EMAIL_TEST 			= '';
+    //private static final String SERVICE_ACCOUNT_PRIVATE_KEY_TEST 	= 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCL/bkKb8BhYWGWjkFh4QOjLDCfXvVB3QM5FXD6Fsi6QJ0DNBPP7NOg4qa0ig3Xao14Kud5//BKdqycDlWWfkllcA02aiF2a3TRgFeP+Z4Xgdba6aptuy3M3OJZ2Bz8jjrCoX6YKXvmtkUPACY9RMe2gSBgyUjTl/2jFF2bDoaIlvg6xyM2DhcXrCxHcbJZLHLioeVuZ2vvVpoM5UMsVHxFyxi9M0ailWUeqF0iEGkcsWQAkHDsHNovE+OY6iJ58dqS6Vh3cREYmlp1/fx2nsvmbMHHxFvmEgJztDwkLasDjRXaxKaCNHyXz1y5ZUgV68OOUJno7G2lieATc3sdRIJrAgMBAAECggEAUiCX3jeRdY/b4Ke0U+feamwSWm0rFWjD60lY7l9Pg3VEqAx1UxZtUYWmp2QWmro4JLeG9VvhbM4SlbsTGycbiBckqTe6Se7gqcfRlvWqecACfIt5IMcfJ4CuimbvGnuWnXiA/GPZ/JASE6rSxD8Fq1w10pJD117jvjjEcaMj6h1GmhE/yJC9vrU5WkaY9VG1g8Axhw0bFGXem0p4groDYqVvPUMAm4k24cJglI6uTLk0X0hZNd9FDIGWYyjhv+wbN+z0xskmW5mXLhM2A4prHkES3ktt7k3mzf8PsQ1KRXai1/voxBYsTVRUVYL4GrWyWQ6M41orfIEfzmjwffWNAQKBgQDejyqyJCWBIoTIESEJ6EO9qchAGFlUU0ZzcgNuJNrPL9f3bchNjcrFUgHIExsMCLaTEzqUZb4/LlepO1GD0C2Xc++/3iNAUfyL1TW1KZv3Nja+ZOJcjZLSCnDSGkgx8f4Op0VhgPv+P3qdtGiuczwLZ7YlZCdg5ol2CbyqW552eQKBgQChBonW2cMLQTLzLvbva2efqnvBMx8EUSnpcnINnf2GHeGKHwlnCJTPBvgr3RsOszKGneIcB9uaZEzGUatWRK49+wTN1za3futzmO+rLy3F0opGFJeOP7PIWvLj6YfBLGYrpRH2ED+8N7pC8u8WFQLxDEiZDAUw0QdBxXl1n9ZXAwKBgEtFVmZbbUfIeeoESQ1FvatmwbBTy9qGM5yV4e0dj9dk0gD/4y+/leW4f5vAQnSGeeEyLqzD4F0T+lflFQOko9bGQj69DWUSlXxhhsGXqgUpE8i+7APrac2Z9GBKvUIPGyKvlfqNGiz6ISk3O/RMSvF8iREKV3shXTpLvsBLLkPZAoGAOt7BFiOXA05a6j2JWg7SW7VgeUnPVSy3PfnxaLkSLy5NfsnKDjk87lOF98NmWQF6v2yJdeYJi3CQARFqqqeBbHeRUhAUmRF101Veih89hM1scCKnJgJ0IBPgKSL/1sf8sogvAN7/7jgRiNh4QIJ+CNKM2Cdk3mwNUyZ3OWGuYzECgYEAkFVC4g7aB0aqJ58oYUms8ItTDffhZERCV+BvfxN1fzGXPJ5e1jUQakgJGwEI7Sl2iJ7NswkvG9U35G9xbZImhhNBvFK/2UR4avxr/gwyH5IAxFIqeyeOqibAvvuAdJdjqFItrMSjqubS6lzLGYzDt+KIPpjFszzM3YWTaDmSYQ4=';
+    private static final String DEFAULT_SERVICE_ACCOUNT_EMAIL		= '';
+    private static final String DEFAULT_SERVICE_ACCOUNT_PRIVATE_KEY	= 'MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCo7/gl4PygDPmBYHnTD+5ZzFoReAt0LhyUilj/pI9puwTOHGqGrAKbY09u2loVYHG1/IU6zCk/3xuCLvmNXgS9IxatZH8MWrRcWcmj8z8rWqsmHz3SW05Pv9pmLwac3rPxsUn/sZlF/9DY2tr7zqo44h20zeTUpfCBpmYJ3eZDlJP+SvoGPl/h/pr/P4lV6ZULqki1fa8bacalzsOR0kYqjfdY6IgISkuk4jcSBAYZNgmRtlMSPKKaDIXbkvogvPq5QL48Rv8VZ8ukdnBY7ak6eNeKNQLQTuzCwxWFkAW7ovxr9IPM8lbAoDUEHp4bPILxJ/V00F4QMm5eoc0PVL6XAgMBAAECggEBAKUqiIgwIY0xYjcVZcXuy2/MFTsDDN+3vYWUhVLbRsNub1I8AgJM5feZ7q1Imc5QjpwImRFVTfb+YFy1JJMMGsH4LlGz8WrYu4GW30eFqHrwmGgbH0wsrLHXtuU0kNiJ+5APb3On5VzEsSFzR6ns8gvPNo/wxQsKecuoLhbzdg8W84+lWjJoaq4mL9H0WXaX9prKNZ9/Xa2kxkgHrs3tip8hJUvwixPIjtSLjauPkTHO+MiPvmfIU/TB+by2IOTzahH1s0qApO/H9zoflaJHRuRcE5EnSE1Z3pNrk9MxR7HceCpHer5adn1H7TLi3ZcrUBCiq3KWgFVDQEejPGy/ejECgYEA/g9ujIsW9ZSHsS5lZrwoLQQE8z4Hced8oNkLx29JH9bU0Yl4X5UDKnsXMehTVjrSVS2IiB+wXOPj6ExreUihT5C0PWqVM3l9OUTMJdAKkXT2MkXnGjjbQIdl08iNEBBzIDqDtBTvYmQ2LYbnBox185T7LiR3+MK6XfJDka5fsR0CgYEAqjopjhu50U8pvycQUJmClAYj6/1iENFwPIOtpW/MCcX76rLElZY5EDfrT1pE4XAZrxJDc6ycIISqBhuJWgtyjlihUnbCicmWfzgwBoahStFljzs7PouyXltVrz+l6WPsuL49QkhynTLkfFnLOjeuQ1492LRn4titfgFLOL/1tEMCgYEA1cBgD2kaqQYNYDob4GLgHneqPojqtJ/BkIbsTSBJUrtqFN1nZGu33S7w5fGE5CDbRATqQTUAKjcmUhSxu7oq1gl2S9H3s/Y8MEm8xPeTXKweU0/Sz5IUjecc+iFa5bAhXHU+x+1xNsP/fTBqAW1987Fd34WZVrdnG5Gv3crrAdUCgYB32lGt08mmHIW5J8jt5tewXw5lttaYHs5WXSQi6i8P5ozzd4DADbAJwkV0bos26xW6VTKWvD6FCsMnX7X6Zzr2DGMxS5q3Ju9GjYoK3jmsEvjduweAhx1EICyZIkgvpoJipNc+1wGTuuRyxUo4qEGS/0SuUn8ekg69PC35O/bEPwKBgC927Rc4rNnRfF1zEJdehDjL0ACfo61aqvIriz0tx/i5YS71IxrLMe71GaVJuGP9f6rRIwKhTgv/KfdXOWIEM0dkWB3T8TYYUg96As3dj3NfZZMv4UVl2jNfh5ShCQ7s6S9F1QTcQA2eF2xrceSqyeT55giszMSC5D91FNQxxhVc';
+    
+    private static final String GA_HOST_NAME 			= 'analyticsreporting.googleapis.com';
+    private static final String GA_POST_URI 			= '/v4/reports:batchGet';
+    
+    private static final String SCOPE_READ 				= 'https://www.googleapis.com/auth/analytics.readonly';
+    private static final String SCOPE_READ_WRITE 		= 'https://www.googleapis.com/auth/analytics';
+    
+    //private static final String VIEW_ID_SF_DEV_TEST 	= '126681580'; // Test Salesforce dev org analytics
+    private static final String DEFAULT_VIEW_ID			= '49971304';
+    
+	private static String sAccessToken;
+	private String sViewId;
+    
+    // DO HTTP Get http://googleapiurl/?params=whatever&acccess_token=[ACCESS_TOKEN_HERE]
+    // SAMPLE query for Core reporting API V3:
+    //   https://www.googleapis.com/analytics/v3/data/ga?ids=ga%3A126681580&start-date=30daysAgo&end-date=yesterday&metrics=ga%3Ausers&access_token=ya29.CjAwAzBsnyzdqyXh0T12BqgzP6IsrszRlrxibS0miRYDv5EyoJYmSKWBGwS3fGw5Svo
+    // SAMPLE query for Reporting API V4
+    //  POST https://analyticsreporting.googleapis.com/v4/reports:batchGet
+	//	{
+	//	  "reportRequests":
+	//	  [
+	//	    {
+	//	      "viewId": "XXXX",
+	//	      "dateRanges": [{"startDate": "2014-11-01", "endDate": "2014-11-30"}],
+	//	      "metrics": [{"expression": "ga:users"}]
+	//	    }
+	//	  ]
+	//	}
+
+	// ------------------------------------------------------------------------
+	// -------------------- Begin Public Methods ------------------------------
+    
+    public GoogleAnalyticsClient()
+    {
+    	//httpOrHttps, hostname, port, authHeader, uriGetRecord, uriCreateUpdateRecord, uriDeleteRecord
+    	this(new WebServiceSettings('HTTPS', GA_HOST_NAME, null, null, null, GA_POST_URI, null));
+    }
+    
+    public GoogleAnalyticsClient(WebServiceSettings settings)
+	{
+		super(settings);
+		if(sAccessToken == null) sAccessToken = getAccessToken();
+		wsSettings.sAuthHeader = 'Bearer ' + sAccessToken;
+		sViewId = DEFAULT_VIEW_ID;
+	}
+	
+	public GA_R_Result getMetrics(String metricExpression, Date startDate, Date endDate, String dimension)
+	{
+		List<String> dimensions = new List<String>();
+		if(dimension != null) dimensions.add(dimension);
+		
+		return getMetrics(new List<String>{ metricExpression }, startDate, endDate, dimensions);
+	}
+	
+	public GA_R_Result getMetrics(List<String> metricExpressions, Date startDate, Date endDate, List<String> dimensions)
+	{
+		GA_Request reqBody = createGARequest(sViewId, startDate, endDate, metricExpressions, dimensions);
+
+		return sendRequest(reqBody);
+	}
+	
+	public GA_R_Result getMetrics(String metricExpression, Integer iDaysAgo, String dimension)
+	{
+		List<String> dimensions = new List<String>();
+		if(dimension != null) dimensions.add(dimension);
+		
+		return getMetrics(new List<String>{ metricExpression }, iDaysAgo, dimensions);
+	}
+	
+	public GA_R_Result getMetrics(List<String> metricExpressions, Integer iDaysAgo, List<String> dimensions)
+	{
+		Date startDate = Date.today() - iDaysAgo;
+		GA_Request reqBody = createGARequest(sViewId, startDate, Date.today(), metricExpressions, dimensions);
+
+		return sendRequest(reqBody);
+	}
+	
+	/**
+	 *  Gets the metric values only in the first item in "rows" in the first item of "reports" in JSON response body.
+	 *  This corresponds to JSON response body "reports"[0]."data"."rows"[]."metrics"[]."values"[0]. Method normally used when there is no dimension in query request or only one dimension found.
+	 **/
+	public static GA_R_DateRangeValues getMetricValues(GA_R_Result result)
+	{
+		GA_R_DateRangeValues values = new GA_R_DateRangeValues();
+		if(result != null && result.reports != null && result.reports.size() > 0)
+		{
+			GA_R_Report report = result.reports[0];
+			if(report.data != null && report.data.rows != null)
+			{
+				List<GA_R_ReportRow> rows = report.data.rows;
+				if(rows.size() > 0 && rows[0].metrics != null && rows[0].metrics.size() > 0)
+				{
+					values = rows[0].metrics[0];
+				}
+			}
+		}
+	
+		return values;	
+	}
+	
+	/**
+	 *  Gets the metric values in all rows in the first JSON item in the list "reports" of response body.
+	 *  This corresponds to JSON response body "reports"[0]."data"."rows"[].
+	 **/
+	public static List<GA_R_ReportRow> getReportRows(GA_R_Result result)
+	{
+		List<GA_R_ReportRow> rows;
+		if(result != null && result.reports != null && result.reports.size() > 0)
+		{
+			GA_R_Report report = result.reports[0];
+			if(report.data != null && report.data.rows != null)
+			{
+				rows = report.data.rows;
+			}
+		}
+	
+		return rows;	
+	}
+	
+	
+	public static void collectConciergeAnalytics(Date startDate, Date endDate)
+	{
+		List<Google_Analytics__c> checkGAList = [SELECT Id, Name FROM Google_Analytics__c WHERE Start_Date__c = :startDate AND End_Date__c = :endDate LIMIT 1];
+		if(checkGAList.size() > 1)
+		{
+			System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  Analytics has already been collected for start date=' + startDate.format() + ' and end date=' + endDate.format() + '.  No further analytics will be collected.');
+			return;
+		}
+		
+		List<String> mainMetricExpressions = new List<String>{
+			METRIC_SESSION_TOTAL, METRIC_SESSION_BOUNCE_RATE, METRIC_PAGE_TRACK_PAGE_VIEWS_PER_SESSION,
+			METRIC_SESSION_AVE_DURATION, METRIC_USER_TOTAL, METRIC_USER_NEW };
+		GA_R_Result result;
+		List<GA_R_ReportRow> reportRows;
+		Integer sessions, users, newUsers;
+		Decimal sessBounceRate, pageViewsPerSess, sessAveDur;
+
+		List<Google_Analytics__c> insertGAs = new List<Google_Analytics__c>();
+		GoogleAnalyticsClient client = new GoogleAnalyticsClient();
+
+		// Get site wide stats
+		result = client.getMetrics(mainMetricExpressions, startDate, endDate, null);
+		GA_R_DateRangeValues values = getMetricValues(result);
+		sessions = Integer.valueOf(values.values[0]);
+		sessBounceRate = Decimal.valueOf(values.values[1]).setScale(2);
+		pageViewsPerSess = Decimal.valueOf(values.values[2]).setScale(2);
+		sessAveDur = Decimal.valueOf(values.values[3]).setScale(2);
+		users = Integer.valueOf(values.values[4]);
+		newUsers = Integer.valueOf(values.values[5]);
+		System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  site Metric value for sessions=' +  sessions +
+			', sessBounceRate=' + sessBounceRate + ', pageViewsPerSess=' + pageViewsPerSess + ', sessAveDur=' + sessAveDur +
+			', users=' + users + ', newUsers=' + newUsers);
+		//System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  site Metric values=' + values);
+		//System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  site client.getMetrics(metrics, yesterday, yesterday - 2)=GA_R_Result=' + result);
+		Google_Analytics__c ga = new Google_Analytics__c(Start_Date__c=startDate, End_Date__c=endDate, Session_Total__c=sessions,
+			Session_Bounce_Rate__c=sessBounceRate, Page_Tracking_Views_Per_Session__c=pageViewsPerSess, Session_Ave_Duration__c=sessAveDur,
+			User_Total__c=users, User_New__c=newUsers);
+		insertGAs.add(ga);
+
+		// Get Page Title dimension stats
+		result = client.getMetrics(mainMetricExpressions, startDate, endDate, new List<String>{ DIM_PAGE_TRACK_TITLE });
+		reportRows = getReportRows(result);
+		if(reportRows != null && reportRows.size() > 0)
+		{
+			for(GA_R_ReportRow r:reportRows)
+			{
+				// Page Title Dimension value
+				String dimensionValue;
+				if(r.dimensions != null && r.dimensions.size() > 0) dimensionValue = r.dimensions[0];
+				System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  page title Dimension value=' + dimensionValue);
+				
+				// Metric values for Page Title Dimension
+				if(r.metrics != null && r.metrics.size() > 0 && r.metrics[0].values != null && r.metrics[0].values.size() > 0)
+				{
+					List<String> dateRangeValues = r.metrics[0].values;
+					sessions = Integer.valueOf(dateRangeValues[0]);
+					sessBounceRate = Decimal.valueOf(dateRangeValues[1]).setScale(2);
+					pageViewsPerSess = Decimal.valueOf(dateRangeValues[2]).setScale(2);
+					sessAveDur = Decimal.valueOf(dateRangeValues[3]).setScale(2);
+					users = Integer.valueOf(dateRangeValues[4]);
+					newUsers = Integer.valueOf(dateRangeValues[5]);
+					System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  page title Metrics for sessions=' +  sessions +
+						', sessBounceRate=' + sessBounceRate + ', pageViewsPerSess=' + pageViewsPerSess + ', sessAveDur=' + sessAveDur +
+						', users=' + users + ', newUsers=' + newUsers);
+					//System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  page title Metric values=' + dateRangeValues);
+					Google_Analytics__c pageTitleGA = new Google_Analytics__c(Start_Date__c=startDate, End_Date__c=endDate,
+						Dimension_1__c='Page Tracking Title', Dimension_1_Value__c=dimensionValue, Session_Total__c=sessions,
+						Session_Bounce_Rate__c=sessBounceRate, Page_Tracking_Views_Per_Session__c=pageViewsPerSess, Session_Ave_Duration__c=sessAveDur,
+						User_Total__c=users, User_New__c=newUsers);
+					insertGAs.add(pageTitleGA);
+				}
+			}
+		}
+		//System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  page title client.getMetrics(metrics, yesterday, yesterday - 2)=GA_R_Result=' + result);
+
+		// Get Country and Region dimension stats
+		result = client.getMetrics(mainMetricExpressions, startDate, endDate, new List<String>{ DIM_GEO_NETWORK_COUNTRY, DIM_GEO_NETWORK_REGION });
+		reportRows = getReportRows(result);
+		if(reportRows != null && reportRows.size() > 0)
+		{
+			for(GA_R_ReportRow r:reportRows)
+			{
+				// Country and Region Dimension value
+				String dimension1Value, dimension2Value;
+				if(r.dimensions != null && r.dimensions.size() > 0) dimension1Value = r.dimensions[0];
+				if(r.dimensions != null && r.dimensions.size() > 1) dimension2Value = r.dimensions[1];
+				System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  Country Dimension 1 value=' + dimension1Value + ', Region dimension 2 value=' + dimension2Value);
+				
+				// Metric values for Country and Region Dimension
+				if(r.metrics != null && r.metrics.size() > 0 && r.metrics[0].values != null && r.metrics[0].values.size() > 0)
+				{
+					List<String> dateRangeValues = r.metrics[0].values;
+					sessions = Integer.valueOf(dateRangeValues[0]);
+					sessBounceRate = Decimal.valueOf(dateRangeValues[1]).setScale(2);
+					pageViewsPerSess = Decimal.valueOf(dateRangeValues[2]).setScale(2);
+					sessAveDur = Decimal.valueOf(dateRangeValues[3]).setScale(2);
+					users = Integer.valueOf(dateRangeValues[4]);
+					newUsers = Integer.valueOf(dateRangeValues[5]);
+					System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  Country and Region Metrics for sessions=' +  sessions +
+						', sessBounceRate=' + sessBounceRate + ', pageViewsPerSess=' + pageViewsPerSess + ', sessAveDur=' + sessAveDur +
+						', users=' + users + ', newUsers=' + newUsers);
+					System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  Country and Region Metric values=' + dateRangeValues);
+					Google_Analytics__c countryRegionGA = new Google_Analytics__c(Start_Date__c=startDate, End_Date__c=endDate,
+						Dimension_1__c='GEO Network Country', Dimension_1_Value__c=dimension1Value, Dimension_2__c='GEO Network Region', Dimension_2_Value__c=dimension2Value,
+						Session_Total__c=sessions, Session_Bounce_Rate__c=sessBounceRate, Page_Tracking_Views_Per_Session__c=pageViewsPerSess,
+						Session_Ave_Duration__c=sessAveDur, User_Total__c=users, User_New__c=newUsers);
+					insertGAs.add(countryRegionGA);
+				}
+			}
+		}
+		//System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  Country and Region client.getMetrics(metrics, yesterday, yesterday - 2)=GA_R_Result=' + result);
+
+		// Get Traffic Channel dimension stats
+		List<String> trafChanMetricExpressions = new List<String>{
+			METRIC_SESSION_TOTAL, METRIC_SESSION_BOUNCE_RATE, METRIC_PAGE_TRACK_PAGE_VIEWS_PER_SESSION,
+			METRIC_SESSION_AVE_DURATION}; // User level scope/metrics not applicable for traffic channel dimension
+		result = client.getMetrics(trafChanMetricExpressions, startDate, endDate, new List<String>{ DIM_LIFETIME_VAL_COHORTS_ACQ_TRAF_CHAN });
+		reportRows = getReportRows(result);
+		if(reportRows != null && reportRows.size() > 0)
+		{
+			for(GA_R_ReportRow r:reportRows)
+			{
+				// Traffic Channel Dimension value
+				String dimensionValue;
+				if(r.dimensions != null && r.dimensions.size() > 0) dimensionValue = r.dimensions[0];
+				System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  Traffic Channel Dimension value=' + dimensionValue);
+				
+				// Metric values for Traffic Channel Dimension
+				if(r.metrics != null && r.metrics.size() > 0 && r.metrics[0].values != null && r.metrics[0].values.size() > 0)
+				{
+					List<String> dateRangeValues = r.metrics[0].values;
+					sessions = Integer.valueOf(dateRangeValues[0]);
+					sessBounceRate = Decimal.valueOf(dateRangeValues[1]).setScale(2);
+					pageViewsPerSess = Decimal.valueOf(dateRangeValues[2]).setScale(2);
+					sessAveDur = Decimal.valueOf(dateRangeValues[3]).setScale(2);
+					System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  Traffic Channel Metrics for sessions=' +  sessions +
+						', sessBounceRate=' + sessBounceRate + ', pageViewsPerSess=' + pageViewsPerSess + ', sessAveDur=' + sessAveDur);
+					//System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  Traffic Channel Metric values=' + dateRangeValues);
+					Google_Analytics__c trafChanGA = new Google_Analytics__c(Start_Date__c=startDate, End_Date__c=endDate,
+						Dimension_1__c='Lifetime Value And Cohorts Acquisition Traffic Channel', Dimension_1_Value__c=dimensionValue, Session_Total__c=sessions,
+						Session_Bounce_Rate__c=sessBounceRate, Page_Tracking_Views_Per_Session__c=pageViewsPerSess, Session_Ave_Duration__c=sessAveDur);
+					insertGAs.add(trafChanGA);
+				}
+			}
+		}
+		//System.debug('++++++++++ConciergeAuctionClient.collectConciergeAnalytics.  traffic channel client.getMetrics(metrics, yesterday, yesterday - 2)=GA_R_Result=' + result);
+		
+		insert insertGAs; 
+	}
+
+	// ------------------------------------------------------------------------
+	// ---------------------- Begin Private methods ---------------------------
+	
+	private static GA_Request createGARequest(String viewId, Date startDate, Date endDate, String metricExpression, String dimension)
+	{
+		List<String> dimensions = new List<String>();
+		if(dimension != null) dimensions.add(dimension);
+		
+		return createGARequest(viewId, startDate, endDate, new List<String>{ metricExpression }, dimensions);
+	}
+	
+	/**
+	 *  Create Google Analytics request object based on required view Id, start date, end date, and expression list.  Dimension list is option.
+	 **/
+	private static GA_Request createGARequest(String viewId, Date startDate, Date endDate, List<String> metricExpressions, List<String> dimensions)
+	{
+		RequestParams params = new RequestParams();
+		params.startDate = startDate;
+		params.endDate = endDate;
+		params.expressions = metricExpressions;
+		params.dimensions = dimensions;
+
+		List<RequestParams> paramList = new List<RequestParams>();
+		paramList.add(params);
+		
+		return createGARequest(viewId, paramList);
+	}
+	
+	/**
+	 *  Create request body for GA Reporting API V4
+	 **/
+	private static GA_Request createGARequest(String viewId, List<RequestParams> params)
+	{
+		if(params == null || params.size() == 0) return null;
+		
+		GA_Request reqBody = new GA_Request();
+		List<GA_ReportRequest> repReqs = new List<GA_ReportRequest>();
+		reqBody.reportRequests = repReqs;
+		
+		for(RequestParams p:params)
+		{
+			if(p.startDate != null && p.endDate != null)
+			{
+				GA_ReportRequest repReq = new GA_ReportRequest();
+				repReqs.add(repReq);
+				repReq.viewId = viewId;
+				List<GA_DateRange> dateRanges = new List<GA_DateRange>();
+				repReq.dateRanges = dateRanges;
+				
+				// start and end date
+				Datetime startDt = Datetime.newInstance(p.startDate.year(), p.startDate.month(), p.startDate.day());
+				Datetime endDt = Datetime.newInstance(p.endDate.year(), p.endDate.month(), p.endDate.day());
+				GA_DateRange dateRange = new GA_DateRange();
+				dateRange.startDate = startDt.format(GA_DATE_FORMAT);
+				dateRange.endDate = endDt.format(GA_DATE_FORMAT);
+				dateRanges.add(dateRange);
+				
+				// metric expressions
+				if(p.expressions != null && p.expressions.size() > 0)
+				{
+					List<GA_MetricExpression> metrics = new List<GA_MetricExpression>();
+					repReq.metrics = metrics;
+					for(String exp:p.expressions)
+					{
+						GA_MetricExpression metricExpression = new GA_MetricExpression();
+						metricExpression.expression = exp;
+						metrics.add(metricExpression);
+					}
+				}
+				
+				// dimension
+				if(p.dimensions != null && p.dimensions.size() > 0)
+				{
+					List<GA_Dimension> dimensions = new List<GA_Dimension>();
+					repReq.dimensions = dimensions;
+					for(String dim:p.dimensions)
+					{
+						GA_Dimension dimension = new GA_Dimension();
+						dimension.name = dim;
+						dimensions.add(dimension);
+					}
+				}
+			}
+		}
+		
+		return reqBody;
+	}
+	
+	private String getAccessToken()
+	{
+		return getAccessToken(DEFAULT_SERVICE_ACCOUNT_PRIVATE_KEY, SCOPE_READ, DEFAULT_SERVICE_ACCOUNT_EMAIL);
+	}
+	
+	private String getAccessToken(String key, String scope, String email)
+	{
+		Http h = new Http();
+		HttpRequest req = new HttpRequest();
+		HttpResponse res = new HttpResponse();
+		req.setEndpoint('https://accounts.google.com/o/oauth2/token');
+		req.setMethod('POST');
+		
+		req.setHeader('ContentType','application/x-www-form-urlencoded');
+		
+		String header = '{"alg":"RS256","typ":"JWT"}';
+		String header_encoded = EncodingUtil.base64Encode(blob.valueof(header));
+		
+		//String claim_set = '{"iss":"[EMAIL ADDRESS GOES HERE]"';
+		//claim_set += ',"scope":"[URL SCOPE OF GOOGLE API GOES HERE]"';
+		String claim_set = '{"iss":"' + email + '"';
+		claim_set += ',"scope":"' + scope + '"';
+		claim_set += ',"aud":"https://accounts.google.com/o/oauth2/token"';
+		claim_set += ',"exp":"' + datetime.now().addHours(1).getTime()/1000;
+		claim_set += '","iat":"' + datetime.now().getTime()/1000 + '"}';
+		
+		String claim_set_encoded = EncodingUtil.base64Encode(blob.valueof(claim_set));
+		
+		String signature_encoded = header_encoded + '.' + claim_set_encoded;
+		
+		//String key = '[KEY GOES HERE]';
+		
+		blob private_key = EncodingUtil.base64Decode(key);
+		signature_encoded = signature_encoded.replaceAll('=','');
+		String signature_encoded_url = EncodingUtil.urlEncode(signature_encoded,'UTF-8');
+		blob signature_blob =   blob.valueof(signature_encoded_url);
+		
+		String signature_blob_string = EncodingUtil.base64Encode(Crypto.sign('RSA-SHA256', signature_blob, private_key));
+		
+		String JWT = signature_encoded + '.' + signature_blob_string;
+		
+		JWT = JWT.replaceAll('=','');
+		
+		String grant_string= 'urn:ietf:params:oauth:grant-type:jwt-bearer';
+		req.setBody('grant_type=' + EncodingUtil.urlEncode(grant_string, 'UTF-8') + '&assertion=' + EncodingUtil.urlEncode(JWT, 'UTF-8'));
+		if (!Test.isRunningTest())
+		{
+			res = h.send(req);
+		} else {
+			res = new HttpResponse();
+	        res.setStatusCode(200);
+	        res.setBody('OK');
+		}
+		String response_debug = res.getBody() +' '+ res.getStatusCode();
+		System.debug('Response =' + response_debug );
+		if(res.getStatusCode() == 200) {
+		    JSONParser parser = JSON.createParser(res.getBody());
+		    while (parser.nextToken() != null) {
+		        if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) && (parser.getText() == 'access_token')) {
+		            // Move to the value.
+		            parser.nextToken();
+		            // Return the access_token
+		            return parser.getText();
+		        }
+		    }
+		}
+		
+		return 'error';
+	}
+
+	private GA_R_Result sendRequest(GA_Request reqBody)
+	{
+		HttpResponse resp = post(reqBody);
+		
+		GA_R_Result result;
+		if(resp.getStatusCode() == HTTP_RESP_SC_OK)
+		{
+			String sJsonResult = resp.getBody();
+			if(sJsonResult != null)
+			{
+				result = (GA_R_Result) JSON.deserialize(sJsonResult, GA_R_Result.class);
+			}
+		}
+		
+		return result;
+	}
+	
+}
