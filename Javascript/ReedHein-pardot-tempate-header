@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<base href="http://go.reedhein.com" >
+		<meta charset="utf-8"/>
+		<meta name="description" content="%%description%%"/>
+		<title>%%title%%</title>
+		<script type="text/javascript" src="https://timeshareexitteam.com/wp-content/uploads/2016/01/iframeResizer.contentWindow.min_.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+		<style type="text/css">
+		    * { margin: 0px; padding: 0px; }
+            
+            .value{  /*override CSS for terms/conditions checkbox*/
+                float: left;
+                margin-right:20px;
+                margin-left: 10px;
+                font-size: 400%;
+            }
+            
+            /* Custom box checkbox CSS
+            input[type=checkbox] {
+                -webkit-appearance: none;
+                appearance: none;
+                cursor: pointer;
+                box-sizing: border-box;
+                position: relative;
+                box-sizing: content-box ;
+                width: 10px;
+                height: 10px;
+            }
+            
+            input[type="checkbox"]:checked{
+                background-color: #000000;
+            }
+            input[type="checkbox"]:focus{
+                outline: 1 none;
+                box-shadow: none;
+            }*/
+            
+		    textarea:focus, input:focus { border: 1px solid #999;
+		        outline: none; text-shadow: none;}
+
+		    body { background: #fff;
+        		   color: #171617;
+                   font-family: "Myriad Pro", sans-serif;
+                   font-size: 15px;
+                   font-weight: 400;
+                   line-height: 24px;
+		    }
+
+		    ::selection {
+                    background-color: #333;
+                    color: #fff;
+            }
+
+		    label {
+		        display: block;
+		        margin-top: 10px;
+		        margin-bottom: 7px;
+		        font-weight: bold;
+		    }
+
+		    input, select {
+		        height: 24px;
+		    }
+
+		    textarea { max-height: 140px;}
+
+		    input, select, textarea {
+		        background-color: #fff;
+                border: 1px solid #ddd;
+                border-radius: 0px;
+                box-shadow: none;
+                color: #999;
+                font-size: 14px;
+                padding: 8px;
+		    }
+
+		    .formwrap {
+		        width: 96%;
+		        padding: 2%;
+		    }
+
+		    input, input[type=submit], textarea, select {
+		        width: 98%;
+                -ms-box-sizing:content-box;
+                -moz-box-sizing:content-box;
+                -webkit-box-sizing:content-box;
+                box-sizing:content-box;
+                margin-top: 5px;
+                margin-bottom: 20px;
+		    }
+
+		    input[type=submit] {
+                width: 70%;
+                background-color:#5FA3BA;
+                border:solid 1px #5FA3BA;
+                font-size:16px;
+                color:#FFFFFF;
+                font-weight:bold;
+                padding-top:15px;
+                padding-bottom:15px;
+                padding-right:5px;
+                padding-left:5px;
+                -moz-border-radius:5px;
+                -webkit-border-radius:5px;
+                border-radius:5px;
+		    }
+
+		    input[type=submit]:hover {
+		        background: #404040;
+		    }
+
+		    .firstname { float: left; width: 48%; margin-right: 2%; }
+		    .lastname { float: left; width: 49%; }
+		    .submit { text-align: center; }
+
+		    .error { color: #E8534F; }
+		    .error input[type=text] { border: 1px solid #E8534F; }
+		    .error select { border: 1px solid #E8534F; }
+
+		</style>
+	</head>
+	<body>
+	    <div class='formwrap'>
+	        %%content%%
+	    </div>
+
+	    <script type='text/javascript'>
+	        /*
+	         * Author   :  ThriveCRM
+	         * Purpose  :  Filter the picklists to provide the user with a more comprehensive list of options
+	         * Uses     :  This script reads input from the following picklists to modify the picklists in the 'Modifies' section of the comments
+	         *               - State/Province
+	         *               - How did you hear about us?
+	         *               - Choose an Option
+	         *
+	         * Modifies :  This script modified the following picklists
+	         *               - Choose an Option
+	         *               - Other
+	         *
+	         * Process  :  Details of the way that this script uses and modifies the picklists
+	         *               - Attaches an change event listener to the following picklists
+	         *                 -- State/Province
+	         *                 -- How did you hear about us
+	         *                 -- Choose an Option
+	         *               - Upon detecting a change in one of the lists, this script will populate the respective dependant field with the values
+	         *                  that correspond to the change (more details throughout code)
+	         *
+	         * IMPORTANT NOTE    :  If the user needs to modify any of the values in the 'picklists 'Choose an Option', 'Radio' or 'How did you hear about us' picklists,
+	         *                          the modifications can be done in the dictionaries set up below. All other picklist modifications should be done inside the pardot
+	         *                          editor.
+	         */
+
+	        /* Dictionary containing an array of all of the states and their corresponding radio station options */
+	        var stations = {
+	            'Alabama': [
+	                'Atlanta - 95.5 AM - News Talk - Herman Cain',
+                    'Atlanta - 750 AM - WSB - Herman Cain',
+                    'Atlanta - 107.5 FM - WAMJ - Shirley Strawberry',
+                    'Nashville - 97.9 FM - WSIX - Bobby Bones',
+                    'The Blaze Radio',
+                    'Glenn Beck Radio',
+                    'Dave Ramsey'],
+                'Alaska': [
+                    'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+                'Arizona' : [
+                    'Phoenix - 550 AM - KFYI - Chris Merrill',
+                    'Phoenix - 92.3 FM - KTAR - Jim Sharpe',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Arkansas' : [
+                    'Dallas - 820 AM - WBAP - Brian Estridge',
+                    'Dallas - 570 AM - KLIF - Amy Chodroff',
+        	        'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'California' : [
+                    'Los Angeles - 640 AM - KFI - John Kobylt',
+                    'Los Angeles -1070 AM - KNX - Jennifer York',
+                    'San Diego - 600 AM - KOGO - Carl DeMaio',
+                    'San Francisco - 740 AM - KCBS - Ron Cervi',
+                    'San Francisco - 810 AM - KGO - Ronn Owens',
+                    'San Francisco - 106.9 FM - KCBS - Ron Cervi',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey',
+                	'Traffic and Weather Reports (California)'],
+                'Colorado' : [
+                    'Denver - 98.5 FM - KYGO - Melissa Moore',
+                    'Denver - 104.3 FM - KKFN - Mark Schlereth',
+                    'Denver - 850 AM - News Radio - April Zesbaugh',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Connecticut' : [
+                    'Boston - 93.7 FM - WEEI - Dale Arnold',
+                    'Boston - 1030 AM - WBZ - Adam Kaufman',
+                    'New York - 1010 WINS-AM - Doug Thompson',
+                    'New York - 880 AM - WCBS - Gordon Damer',
+	                'The Blaze Radio',
+                	'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Delaware' : [
+        	        'Baltimore - 1090 AM - WBAL - Derek Hunter',
+                    'Baltimore - Magic 95.9 FM - WWIN - Tom Joyner',
+                    'Washington DC - WMAL - Chris Plante',
+                    'Philadelphia - 610 AM - WIP - Angelo Cataldi',
+                    'Philadelphia - 94 FM - WIP - Angelo Cataldi',
+                    'Philadelphia - 1060 AM - KYW - Harry Donahue',
+                    'The Blaze Radio',
+                    'Glenn Beck Radio',
+                    'Dave Ramsey'],
+                'Florida' : [
+                    'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Georgia' : [
+        	        'Atlanta - 95.5 AM - News Talk - Herman Cain',
+                    'Atlanta - 750 AM - WSB - Herman Cain',
+                    'Atlanta - 107.5 FM - WAMJ - Shirley Strawberry',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Hawaii' : [
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Idaho' : [
+                    'Salt Lake City - 1160 AM - KSL - Jay McFarland',
+                    'Salt Lake City - 105.9 FM - KNRS - Rod Arquette/Dave Ramsey',
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Illinois' : [
+                    'Chicago - 720 AM - WGN Radio - Steve Cochran',
+                    'Chicago - 780 AM - WBBM - Jeff Joniak',
+                    'Chicago - 105.9 FM - WBBM - Jeff Joniak',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Indiana' : [
+                    'Chicago - 720 AM - WGN Radio - Steve Cochran',
+                    'Chicago - 780 AM - WBBM - Jeff Joniak',
+                    'Chicago - 105.9 FM - WBBM - Jeff Joniak',
+                    'Detroit - 760 AM - WJR - Frank Beckman',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Iowa' : [
+                    'Chicago - 720 AM - WGN Radio - Steve Cochran',
+                    'Chicago - 780 AM - WBBM - Jeff Joniak',
+                    'Chicago - 105.9 FM - WBBM - Jeff Joniak',
+                    'Minneapolis - 830 AM - WCCO - Jordana Green',
+                    'Minneapolis - 100.3 FM - KFXN - Dan Cole',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Kansas' : [
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Kentucky' : [
+                    'Nashville - 97.9 FM - WSIX - Bobby Bones',
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Louisiana' : [
+                    'Dallas - 820 AM - WBAP - Brian Estridge',
+                    'Dallas - 570 AM - KLIF - Amy Chodroff',
+                    'Houston - 740 AM - KTRH - Michael Berry',
+                    'Houston - 950 AM - KPRC - Michael Berry',
+                    'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Maine' : [
+        	        'Boston - 93.7 FM - WEEI - Dale Arnold',
+                    'Boston - 1030 AM - WBZ - Adam Kaufman',
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Maryland' : [
+                    'Baltimore - 1090 AM - WBAL - Derek Hunter',
+                    'Baltimore - 105.7 FM - WJZ - Steve Davis',
+                    'Baltimore - Magic 95.9 FM - WWIN - Tom Joyner',
+                    'Washington DC - WMAL - Chris Plante',
+                    'Philadelphia - 610 AM - WIP - Angelo Cataldi',
+                    'Philadelphia - 94 FM - WIP - Angelo Cataldi',
+                    'Philadelphia - 1060 AM - KYW - Harry Donahue',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Massachusetts' : [
+                    'Boston - 93.7 FM - WEEI - Dale Arnold',
+                    'Boston - 1030 AM - WBZ - Adam Kaufman',
+                    'New York - 1010 AM - WINS - Doug Thompson',
+                    'New York - 880 AM - WCBS - Gordon Damer',
+	                'The Blaze Radio',
+        	        'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Michigan' : [
+                    'Detroit - 760 AM - WJR - Frank Beckman',
+                    'Toronto - News Talk 1010 AM - CFRB - Jim Richards',
+                    'Toronto - 104.5 FM - CHUM - Roger Ashby',
+                    'Chicago - 720 AM - WGN Radio - Steve Cochran',
+                    'Chicago - 670 AM - The Score - Jeff Joniak',
+                    'Chicago - 780 AM - WBBM - Jeff Joniak',
+                    'Chicago - 105.9 FM - WBBM - Jeff Joniak',
+        	        'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Minnesota' : [
+        	        'Minneapolis - 830 AM - WCCO - Jordana Green',
+                    'Minneapolis - 100.3 FM - KFXN - Dan Cole',
+                    'Winnipeg - 680 AM - CJOB - Geoff Currier',
+        	        'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Mississippi' : [
+        	        'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Missouri' : [
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Montana' : [
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Nebraska' : [
+                    'Denver - 98.5 FM - KYGO - Melissa Moore',
+                    'Denver - 104.3 FM - KKFN - Mark Schlereth',
+                    'Denver - 850 AM - News Radio - April Zesbaugh',
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Nevada' : [
+        	        'Salt Lake City - 1160 AM - KSL - Jay McFarland',
+                    'Salt Lake City - 105.9 FM - KNRS - Rod Arquette/Dave Ramsey',
+        	        'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'New Hampshire' : [
+        	        'Boston - 93.7 FM - WEEI - Dale Arnold',
+                    'Boston - 1030 AM - WBZ - Adam Kaufman',
+        	        'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'New Jersey' : [
+                    'Baltimore - 1090 AM - WBAL - Derek Hunter',
+                    'Baltimore - 105.7 FM - WJZ - Steve Davis',
+                    'Baltimore - Magic 95.9 FM - WWIN - Tom Joyner',
+                    'New York - 1010 WINS-AM - Doug Thompson',
+                    'New York - 880 AM - WCBS - Gordon Damer',
+                    'Philadelphia - 610 AM - WIP - Angelo Cataldi',
+                    'Philadelphia - 94 FM - WIP - Angelo Cataldi',
+                    'Philadelphia - 1060 AM - KYW - Harry Donahue',
+                    'Washington DC - WMAL - Chris Plante',
+                	'The Blaze Radio',
+        	        'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'New Mexico' : [
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'New York' : [
+                    'New York - 1010 AM - WINS - Doug Thompson',
+                    'New York - 880 AM - WCBS - Gordon Damer',
+                    'Philadelphia - 610 AM - WIP - Angelo Cataldi',
+                    'Philadelphia - 94 FM - WIP - Angelo Cataldi',
+                    'Philadelphia - 1060 AM - KYW - Harry Donahue',
+                    'Toronto - News Talk 1010 AM - CFRB - Jim Richards',
+                    'Toronto - 104.5 FM - CHUM - Roger Ashby',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'North Carolina' : [
+                    'Atlanta - News Talk 95.5 - Herman Cain',
+                    'Atlanta - 750 AM - WSB - Herman Cain',
+                    'Atlanta - 107.5 FM - WAMJ - Shirley Strawberry',
+                    'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'North Dakota' : [
+        	        'Winnipeg - 680 CJOB AM - Geoff Currier',
+                    'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Ohio' : [
+                    'Columbus - 610 WTVN-AM',
+                    'Detroit - 760 AM - WJR - Frank Beckman',
+                    'Toronto - News Talk 1010 AM - CFRB - Jim Richards',
+                    'Toronto - 104.5 FM - CHUM - Roger Ashby',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Oklahoma' : [
+                    'Dallas - 820 AM - WBAP - Brian Estridge',
+                    'Dallas - 570 AM - KLIF - Amy Chodroff',
+	                'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Oregon' : [
+        	        'Portland - 970 AM - KUFO - Lars Larson',
+                    'Portland - 101.1 FM - KXL - Lars Larson',
+                    'Portland - 106.7 FM - KLTH - Scott Tom',
+                    'Traffic and Weather Reports (Oregon)',
+        	        'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Pennsylvania' : [
+        	        'Philadelphia - 610 AM - WIP - Angelo Cataldi',
+                    'Philadelphia - 94 FM - WIP - Angelo Cataldi',
+                    'Philadelphia - 1060 AM - KYW - Harry Donahue',
+                    'Baltimore - 1090 AM - WBAL - Derek Hunter',
+                    'Baltimore - 105.7 FM - WJZ - Steve Davis',
+                    'Baltimore - Magic 95.9 FM - WWIN - Tom Joyner',
+                    'New York - 1010 AM - WINS - Doug Thompson',
+                    'New York - 880 AM - WCBS - Gordon Damer',
+                    'Washington DC - WMAL - Chris Plante',
+                    'Toronto - News Talk 1010 AM - CFRB - Jim Richards',
+                    'Toronto - 104.5 FM - CHUM - Roger Ashby',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Rhode Island' : [
+                    'Boston - 93.7 FM - WEEI - Dale Arnold',
+                    'Boston - 1030 AM - WBZ - Adam Kaufman',
+                    'New York - 1010 AM - WINS - Doug Thompson',
+                    'New York - 880 AM - WCBS - Gordon Damer',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'South Carolina' : [
+        	        'Atlanta - 95.5 AM - News Talk - Herman Cain',
+                    'Atlanta - 750 AM - WSB - Herman Cain',
+                    'Atlanta - 107.5 FM - WAMJ - Shirley Strawberry',
+	                'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'South Dakota' : [
+        	        'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Tennessee' : [
+                    'Nashville - 1510 AM - WLAC - Dave Ramsey',
+                    'Nashville - 97.9 FM - WSIX - Bobby Bones',
+                    'Atlanta - 95.5 AM - News Talk - Herman Cain',
+                    'Atlanta - 750 AM - WSB - Herman Cain',
+                    'Atlanta - 107.5 FM - WAMJ - Shirley Strawberry',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Texas' : [
+                    'Austin - KASE 101 FM - Bobby Bones',
+                    'Austin - 590AM / 99.7FM - KLBJ - Pete Thomson',
+                    'Austin - 101.5 FM - KROX - Pete Thomson',
+                    'Austin - 93.7 FM - KLBJ - Charlie Hodge',
+                    'Dallas - 820 AM - WBAP - Brian Estridge',
+                    'Dallas - 570 AM - KLIF - Amy Chodroff',
+                    'Dallas - 1080 AM - KRLD - Pete Thomson',
+                    'El Paso - 600 AM - KROD - Pete Thomson',
+                    'Hillsboro - 1500 AM - KHBR - Pete Thomson',
+                    'Houston - 650 AM - KIKK - Pete Thomson',
+                    'Houston - 610AM / 100.3 FM - KILT - Pete Thomson',
+                    'Houston - 95.7 FM - KKHH - Pete Thomson',
+                    'San Antonio - News Radio 1200 AM - WOAI - Joe Pags',
+                    'San Antonio - 92.5 FM - KRPT - Pete Thomson',
+                    'San Antonio - 760 AM - KTKR - Pete Thomson',
+                    'San Antonio - 1200 AM - WOAI - Pete Thomson',
+                    'Houston - 740 AM - KTRH - Michael Berry',
+                    'Houston - 950 AM - KPRC - Michael Berry',
+                    'Tyler - 600AM / 92.1FM - KTBB - Pete Thomson',
+                    'Tyler - 92.1 FM - KRWR - Pete Thomson',
+        	        'The Blaze Radio',
+        	        'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Utah' : [
+                    'Salt Lake City - 1160 AM - KSL - Jay McFarland',
+                    'Salt Lake City - 105.9 FM - KNRS - Rod Arquette/Dave Ramsey',
+	                'The Blaze Radio',
+                    'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Vermont' : [
+        	        'Toronto - News Talk 1010 AM - CFRB - Jim Richards',
+        	        'Toronto - 104.5 FM - CHUM - Roger Ashby',
+	                'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Virginia' : [
+        	        'Baltimore - 1090 AM - WBAL - Derek Hunter',
+                    'Baltimore - 105.7 FM - WJZ - Steve Davis',
+                    'Baltimore - Magic 95.9 FM - WWIN - Tom Joyner',
+                    'Washington DC - WMAL - Chris Plante',
+                    'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Washington' : [
+        	        'Seattle - 710 AM - ESPN - John Clayton',
+                    'Seattle - 1000 AM - KOMO - Gregg Hersholt',
+                    'Seattle - 97.3 FM - KIRO - Dori Monson',
+                    'Seattle - KING 5',
+                    'Portland - 970 AM - KUFO - Lars Larson',
+                    'Portland - 101.1 FM - KXL - Lars Larson',
+                    'Portland - 106.7 FM - KLTH - Scott Tom',
+                    'Vancouver - 730 AM - CHMJ - Simi Sara',
+                    'Vancouver - 980 AM - CKNW - Simi Sari',
+                    'Vancouver - NEWS 1130 AM - CKWX - Kirk McLean',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Washington, DC' : [
+                    'Washington DC - 630 AM - WMAL - Chris Plante',
+                    'Baltimore - 1090 AM - WBAL - Derek Hunter',
+                    'Baltimore - 105.7 FM - WJZ - Steve Davis',
+                    'Baltimore - Magic 95.9 FM - WWIN - Tom Joyner',
+                    'New York - 1010 AM - WINS - Doug Thompson',
+                    'New York - 880 AM - WCBS - Gordon Damer',
+                    'Philadelphia - 610 AM - WIP - Angelo Cataldi',
+                    'Philadelphia - 94 FM - WIP - Angelo Cataldi',
+                    'Philadelphia -1060 KYW-AM –Harry Donahue',
+                	'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'West Virginia' : [
+                    'Baltimore - 1090 AM - WBAL - Derek Hunter',
+                    'Baltimore - 105.7 FM - WJZ - Steve Davis',
+                    'Baltimore - Magic 95.9 FM - WWIN - Tom Joyner',
+                    'Washington DC - WMAL - Chris Plante',
+	                'The Blaze Radio',
+        	        'Glenn Beck Radio',
+        	        'Dave Ramsey'],
+        	    'Wisconsin' : [
+        	        'Chicago - 720 AM - WGN Radio - Steve Cochran',
+                    'Chicago - 780 AM - WBBM - Jeff Joniak',
+                    'Chicago - 105.9 FM - WBBM - Jeff Joniak',
+                    'Minneapolis - 830 AM - WCCO - Jordana Green',
+                    'Minneapolis - 100.3 FM - KFXN - Dan Cole',
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Wyoming' : [
+                    'Salt Lake City - 1160 AM - KSL - Jay McFarland',
+                    'Salt Lake City - 105.9 FM - KNRS - Rod Arquette/Dave Ramsey',
+                    'Denver - 98.5 FM - KYGO - Melissa Moore',
+                    'Denver - 104.3 FM - KKFN - Mark Schlereth',
+                    'Denver - 850 AM - News Radio - April Zesbaugh',
+                	'The Blaze Radio',
+        	        'Glenn Beck Radio',
+                	'Dave Ramsey'],
+                'Alberta' : [
+                    'Calgary - 107.3 FM - CFGQ  - Jeff & Sarah',
+                    'Calgary - 770 AM - CHQR  - Bruce Kenyon'],
+                'British Columbia' : [
+                    'Vancouver - 730 AM - CHMJ - Simi Sara',
+                    'Vancouver - 980 AM - CKNW - Simi Sari',
+                    'Vancouver - NEWS 1130 AM - CKWX - Kirk McLean',
+                    'Seattle - 1000 KOMO AM - Gregg Hersholt',
+                    'Seattle - 97.3 KIRO-FM - Dori Monson',
+                    'Seattle - KING 5'],
+                'Manitoba' : [
+                    'Winnipeg - 680 AM - CJOB - Geoff Currier'],
+                'Montreal' : [],
+                'New Brunswick' : [],
+                'Newfoundland' : [],
+                'Nova Scotia' : [],
+                'Ontario' : [
+                    'Toronto - News Talk 1010 AM - CFRB - Jim Richards',
+                    'Toronto - 104.5 FM - CHUM - Roger Ashby',
+                    'Toronto - 1050 AM - TSN - Ray Ferraro',
+                    'Traffic and Weather Reports (Toronto)',
+                    'Detroit - 760 AM - WJR - Frank Beckman'],
+                'Quebec' : [
+                    'Toronto - News Talk 1010 - Jim Richards',
+                    'Toronto - 104.5 FM - CHUM - Roger Ashby',
+                    'Toronto - 1050 AM - TSN - Ray Ferraro'],
+                'Saskatchewan' : [],
+                'Prince Edward Island' : [],
+                'Northwest Territories' : [],
+                'Yukon' :[]
+	        };
+
+	        /* Dictionary containing an array of all of the possible options for the how did you hear about us select box */
+	        var leadDetailOptions = {
+	            'Internet' : [
+	                'Google',
+	                'Bing',
+	                'Yahoo',
+        	        'Yelp',
+        	        'Banner Ad',
+        	        'AARP',
+        	        'BBB',
+        	        'Trust Pilot',
+                    'Consumer Reports',
+                    'JesseJones.com'],
+        	    'TV' : [
+        	        'PBS',
+        	        'The Blaze TV',
+        	        'CNN',
+        	        'American Heroes',
+        	        'Velocity',
+        	        'Fox Sports 1',
+        	        'Esquire',
+        	        'Movies!',
+        	        'Travel Channel',
+                    'History Channel (Canada)'],
+                'Traffic and Weather Reports' : [
+                    'Traffic and Weather Reports (California)',
+                    'Traffic and Weather Reports (Oregon)',
+                    'Traffic and Weather Reports (Toronto)'],
+                'Print' : [
+                    'AARP',
+                    'Consumer Reports',
+                    'California Senior Guide',
+                    'Alaska Airlines In-Flight Magazine',
+                    'Seattle Magazine',
+                	'Direct Mailer',
+        	        'Flyer/Handout'],
+        	    'Social Media' : [
+        	        'Facebook',
+                	'Twitter',
+                	'LinkedIn',
+                	'YouTube',
+                	'Google+'],
+                'Online Radio' : [
+                    'I Heart Radio App',
+        	        'Streamed Online',
+                	'Podcast'],
+                'Referred By' : [
+                    'Family',
+                    'Friend',
+                    'ReedHein Employee'],
+        	    'Dave Ramsey' : [
+        	        'Dave Ramsey Radio',
+                	'Dave Ramsey Podcast',
+                	'DaveRamsey.com',
+                	'Smart Money Tour',
+                	'Dave Ramsey Newsletter',
+                	'Listened on DaveRamsey.com',
+                	'Watched on DaveRamsey.com',
+                	'I Heart Radio App'],
+                'The Blaze' : [
+                    'The Blaze Radio',
+                	'Glenn Beck Radio',
+                	'The Blaze TV',
+                	'TheBlaze.com',
+                	'Glenn Beck Facebook'],
+                'The Rush Limbaugh Show' : [
+        	        'The Rush Limbaugh Show'],
+        	    'The Steve Harvey Morning Show' : [
+        	        'The Steve Harvey Morning Show'],
+        	    'Coast to Coast AM with George Noory' : [
+        	        'Coast to Coast AM with George Noory'],
+                'Email' : [
+                    'Email from ReedHein'],
+
+                "Event" : {
+                    "British Columbia" : [
+                        "Tiny House and Modular Home Show (Jul 2016)",
+                        "Colonial Days Fair (Jul 2016)",
+                        "Manitoba Stampede (Jul 2016)",
+                        "Canada Day Festival (Jul 2016)",
+                        "Smart Money Tour"],
+                    "Ontario" : [
+                        "Canadian National Exhibition (Aug 2016)",
+                        "Ottawa Fall Home Show (Sep 2016)",
+                        "Smart Money Tour"],
+                    "Alabama" : [
+                        "Smart Money Tour"],
+                    "Alaska" : [
+                        "Smart Money Tour"],
+                    "Arizona" : [
+                        "Arizona State Fair (Oct 2016)",
+                        "Maricopa County Home & Garden Show (Sep 2016)",
+                        "Smart Money Tour"],
+                    "Arkansas" : [
+                        "Smart Money Tour"],
+                    "California" : [
+                        "The Ultimate Women's Expo - Los Angeles (Oct 2016)",
+                        "The Ultimate Women's Expo - San Francisco (Oct 2016)",
+                        "Los Angeles County Fair (Sep 2016)",
+                        "Ventura County Fair (Aug 2016)",
+                        "San Diego Fall Home Show (Aug 2016)",
+                        "Anaheim Home and Garden Show (Aug 2016)",
+                        "Smart Money Tour"],
+                    "Colorado" : [
+                        "Smart Money Tour"],
+                    "Connecticut" : [
+                        "Smart Money Tour"],
+                    "Delaware" : [
+                        "Smart Money Tour"],
+                    "Florida" : [
+                        "Smart Money Tour"],
+                    "Georgia" : [
+                        "Smart Money Tour"],
+                    "Hawaii" : [
+                        "Smart Money Tour"],
+                    "Idaho" : [
+                        "Smart Money Tour"],
+                    "Illinois" : [
+                        "Smart Money Tour"],
+                    "Indiana" : [
+                        "Smart Money Tour"],
+                    "Iowa" : [
+                        "Smart Money Tour"],
+                    "Kansas" : [
+                        "Smart Money Tour"],
+                    "Kentucky" : [
+                        "Kentucky State Fair (Aug 2016)",
+                        "Smart Money Tour"],
+                    "Louisiana" : [
+                        "Smart Money Tour"],
+                    "Maine" : [
+                        "Smart Money Tour"],
+                    "Massachusetts" : [
+                        "Smart Money Tour"],
+                    "Michigan" : [
+                        "Smart Money Tour"],
+                    "Minnesota" : [
+                        "Smart Money Tour"],
+                    "Missouri" : [
+                        "Smart Money Tour"],
+                    "Montana" : [
+                        "Smart Money Tour"],
+                    "Nebraska" : [
+                        "Smart Money Tour"],
+                    "Nevada" : [
+                        "Great American Foodie Fest (Jul 2016)",
+                        "Bridal Spectacular (Aug 2016)",
+                        "Smart Money Tour"],
+                    "New Jersey" : [
+                        "Smart Money Tour"],
+                    "New Mexico" : [
+                        "Smart Money Tour"],
+                    "New York" : [
+                        "The Great New York State Fair (Aug 2016)",
+                        "Smart Money Tour"],
+                    "North Carolina" : [
+                        "Smart Money Tour"],
+                    "North Dakota" : [
+                        "Smart Money Tour"],
+                    "Ohio" : [
+                        "Ohio State Fair (Jul 2016)",
+                        "Smart Money Tour"],
+                    "Oklahoma" : [
+                        "Smart Money Tour"],
+                    "Oregon" : [
+                        "Smart Money Tour"],
+                    "Pennsylvania" : [
+                        "Smart Money Tour"],
+                    "Rhode Island" : [
+                        "Smart Money Tour"],
+                    "South Carolina" : [
+                        "Smart Money Tour"],
+                    "South Dakota" : [
+                        "Smart Money Tour"],
+                    "Tennessee" : [
+                        "Smart Money Tour"],
+                    "Texas" : [
+                        "Smart Money Tour"],
+                    "Utah" : [
+                        "Smart Money Tour"],
+                    "Vermont" : [
+                        "Vermont State Fair (Aug 2016)",
+                        "Smart Money Tour"],
+                    "Washington" : [
+                        "Taste of Tacoma (Jun 2016)",
+                        "Kent Cornucopia Days (Jul 2016)",
+                        "Bite of Seattle (Jul 2016)",
+                        "Washington State Fair (Sep 2016)",
+                        "Smart Money Tour"],
+                    "Washington, DC" : [
+                        "Smart Money Tour"],
+                    "West Virginia" : [
+                        "Smart Money Tour"],
+                    "Wisconsin" : [
+                        "Smart Money Tour"],
+                    "Wyoming" : [
+                        "Smart Money Tour"]
+		    }
+	    };
+        
+            convertInputToSelect( '.leadSourceDetail input' );
+            convertInputToSelect( '.radioStation input' );
+            
+	        var state = $('.stateProv select'); // state/Prov
+	        var hearAboutUs = $('.hearAboutUs select'); // Hear About Us Select
+            var radioSelect = $('.radioStation select'); // Radio Select -- Only appears when 'Radio' is selected in 'How did you hear about us?'
+            var leadSource = $('.leadSourceDetail select'); // LEad Source detail is the 'Choose an Option' field text convert to picklist convert back to text
+            var otherFieldLabel = $('.otherField label'); // This is the label for the 'Other' Textbox
+            var otherField = $('.otherField input'); // This is the actual 'Other' textbox input
+            
+
+            console.log( leadSource );
+
+	        /*
+	         * Functions   : populateTrafficWeatherList()
+	         * Purpose     : Populates the 'Choose an Option' picklist with the values from the leadSourceOptions dictionary
+	         * Triggered   : triggered by the event listener attached to the hearAboutUs picklist
+	         */
+	        var populateTrafficWeatherList = function() {
+	            prepLeadSourceData();
+
+	            var replacementOptions = leadDetailOptions['Traffic and Weather Reports'];
+
+	            for (i = 0; i < replacementOptions.length; i++) {
+	                var option = document.createElement('option');
+	                option.text = replacementOptions[i];
+	                option.value = replacementOptions[i];
+                    leadSource[0].add(option);
+	            }
+	        };
+
+	        /*
+	         * Functions   : populateRadioSelect()
+	         * Purpose     : populates the radioSelect picklist with values from the stations dictionary
+	         * Triggered   : triggered by the event listeners attached to the state and hearAboutUs picklist
+	         */
+	        var populateRadioSelect = function() {
+
+	            radioSelect.empty();
+                var replacementOptions = stations[state[0].options[state[0].selectedIndex].text];
+
+                for (i = 0; i < replacementOptions.length; i++) {
+                    var option = document.createElement("option");
+                    option.text = replacementOptions[i];
+                    option.value = replacementOptions[i];
+                    radioSelect[0].add(option);
+                }
+
+                var option = document.createElement('option');
+                option.text = "Other";
+                option.value = "Other";
+                radioSelect[0].add(option);
+	        };
+
+
+	        /*
+	         * Functions   : populateInternetList()
+	         * Purpose     : Populates the 'Choose an Option' picklist with the values from the leadSourceOptions dictionary
+	         * Triggered   : triggered by the event listener attached to the hearAboutUs picklist
+	         */
+	        var populateInternetList = function() {
+	            prepLeadSourceData();
+
+	            var replacementOptions = leadDetailOptions['Internet'];
+
+	            for (i = 0; i < replacementOptions.length; i++) {
+	                var option = document.createElement('option');
+	                option.text = replacementOptions[i];
+	                option.value = replacementOptions[i];
+                    leadSource[0].add(option);
+	            }
+	        };
+
+
+	        /*
+	         * Functions   : populateSocialMediaList()
+	         * Purpose     : Populates the 'Choose an Option' picklist with the values from the leadSourceOptions dictionary
+	         * Triggered   : triggered by the event listener attached to the hearAboutUs picklist
+	         */
+	        var populateSocialMediaList = function() {
+	            prepLeadSourceData();
+
+	            var replacementOptions = leadDetailOptions['Social Media'];
+
+	            for (i = 0; i < replacementOptions.length; i++) {
+	                var option = document.createElement('option');
+	                option.text = replacementOptions[i];
+	                option.value = replacementOptions[i];
+                    leadSource[0].add(option);
+	            }
+	        };
+
+	        /*
+	         * Functions   : populateTVList()
+	         * Purpose     : Populates the 'Choose an Option' picklist with the values from the leadSourceOptions dictionary
+	         * Triggered   : triggered by the event listener attached to the hearAboutUs picklist
+	         */
+	        var populateTVList = function() {
+	            prepLeadSourceData();
+
+	            var replacementOptions = leadDetailOptions['TV'];
+
+	            for (i = 0; i < replacementOptions.length; i++) {
+	                var option = document.createElement('option');
+	                option.text = replacementOptions[i];
+	                option.value = replacementOptions[i];
+                    leadSource[0].add(option);
+	            }
+                
+	        };
+
+	        /*
+	         * Functions   : populatePrintList()
+	         * Purpose     : Populates the 'Choose an Option' picklist with the values from the leadSourceOptions dictionary
+	         * Triggered   : triggered by the event listener attached to the hearAboutUs picklist
+	         */
+	        var populatePrintList = function() {
+	            prepLeadSourceData();
+
+	            var replacementOptions = leadDetailOptions['Print'];
+
+	            for (i = 0; i < replacementOptions.length; i++) {
+	                var option = document.createElement('option');
+	                option.text = replacementOptions[i];
+	                option.value = replacementOptions[i];
+                    leadSource[0].add(option);
+	            }
+	        };
+
+
+	        /*
+	         * Functions   : populateRadioList()
+	         * Purpose     : Populates the 'Choose an Option' picklist with the values from the leadSourceOptions dictionary
+	         * Triggered   : triggered by the event listener attached to the hearAboutUs picklist
+	         */
+	        var populateOnlineRadioList = function() {
+	            prepLeadSourceData();
+
+	            var replacementOptions = leadDetailOptions['Online Radio'];
+
+	            for (i = 0; i < replacementOptions.length; i++) {
+	                var option = document.createElement('option');
+	                option.text = replacementOptions[i];
+	                option.value = replacementOptions[i];
+                    leadSource[0].add(option);
+	            }
+	        };
+
+	        /*
+	         * Functions   : populateReferredList()
+	         * Purpose     : Populates the 'Choose an Option' picklist with the values from the leadSourceOptions dictionary
+	         * Triggered   : triggered by the event listener attached to the hearAboutUs picklist
+	         */
+	        var populateReferredList = function() {
+	            prepLeadSourceData();
+
+	            var replacementOptions = leadDetailOptions['Referred By'];
+
+	            for (i = 0; i < replacementOptions.length; i++) {
+	                var option = document.createElement('option');
+	                option.text = replacementOptions[i];
+	                option.value = replacementOptions[i];
+                    leadSource[0].add(option);
+	            }
+	        };
+
+	        /*
+	         * Functions   : populateDaveRamseyList()
+	         * Purpose     : Populates the 'Choose an Option' picklist with the values from the leadSourceOptions dictionary
+	         * Triggered   : triggered by the event listener attached to the hearAboutUs picklist
+	         */
+	        var populateDaveRamseyList = function() {
+	            prepLeadSourceData();
+
+	            var replacementOptions = leadDetailOptions['Dave Ramsey'];
+
+	            for (i = 0; i < replacementOptions.length; i++) {
+	                var option = document.createElement('option');
+	                option.text = replacementOptions[i];
+	                option.value = replacementOptions[i];
+                    leadSource[0].add(option);
+	            }
+	        };
+
+
+	        /*
+	         * Functions   : populateTheBlazeList()
+	         * Purpose     : Populates the 'Choose an Option' picklist with the values from the leadSourceOptions dictionary
+	         * Triggered   : triggered by the event listener attached to the hearAboutUs picklist
+	         */
+	        var populateTheBlazeList = function() {
+	            prepLeadSourceData()
+
+	            var replacementOptions = leadDetailOptions['The Blaze'];
+
+	            for (i = 0; i < replacementOptions.length; i++) {
+	                var option = document.createElement('option');
+	                option.text = replacementOptions[i];
+	                option.value = replacementOptions[i];
+                    leadSource[0].add(option);
+	            }
+	        };
+
+	        /*
+	         * Functions   : populateEventList()
+	         * Purpose     : Populates the 'Choose an Option' picklist with the values from the leadSourceOptions dictionary
+	         * Triggered   : triggered by the event listener attached to the hearAboutUs picklist
+	         */
+	        var populateEventList = function() {
+	            prepLeadSourceData()
+
+	            var replacementOptions = leadDetailOptions['Event'][state[0].options[state[0].selectedIndex].text];
+
+	            if (replacementOptions != null) {
+	                for (i = 0; i < replacementOptions.length; i++) {
+	                    var option = document.createElement('option');
+	                    option.text = replacementOptions[i];
+	                    option.value = replacementOptions[i];
+	                    leadSource[0].add(option);
+	                }
+	            }
+
+	            if (leadSource[0].length == 0) {
+                    var option = document.createElement('option');
+                    option.text = "Other";
+                    option.value = "Other";
+                    leadSource[0].add(option);
+                    return;
+                } else if (leadSource[0].lastChild.text != "Other") {
+                    var option = document.createElement('option');
+                    option.text = "Other";
+                    option.value = "Other";
+                    leadSource[0].add(option);
+                }
+	        }
+
+	        /*
+	         * EventListener
+	         * On             : change
+	         * AttachedTo     : hearAboutUs picklist
+	         * Purpose        : Detects change on the hearAboutUS picklist and popualtes the Choose an Option picklist based on the respective change
+	         * Note           : This is where the bulk of the processing occurs. This section contains the most logic as to what list to populate and with
+	         *                   which values to put inside of that list.
+	         *                  The general process that would trigger this event listener is as follows.
+	         *                   - The user clicks the dropdown menu and selects on option. Depending on which option is selected, the respective if statement
+	         *                      is executed and the 'Select an Option' Picklist is populated with the corresponding values.
+	         *                   - The if statement will call a function that will do the actual populating of the 'Select an Option' list
+	         */
+            hearAboutUs[0].addEventListener("change", function() {
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Radio') {
+
+                    radioSelect[0].addEventListener('change', function() {
+                        if (radioSelect[0][radioSelect[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            console.log('Showing Other Box - Radio');
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+                            console.log("Hiding Other Box - Radio");
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+
+                    if (state[0][state[0].selectedIndex].text == '' || state[0][state[0].selectedIndex].text == '-None-') {
+                        console.log("Hiding Other Box - Null State - Radio");
+                        otherField.hide();
+                        otherFieldLabel.hide();
+                        return;
+                    };
+
+                    populateRadioSelect();
+
+                    if (radioSelect[0].length == 1) {
+                        otherField.show();
+                        otherFieldLabel.show();
+                        return;
+                    }
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+                }
+
+
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Internet') {
+                    populateInternetList();
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+
+                }
+
+
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Social Media') {
+                    populateSocialMediaList();
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                    postLeadSourceData();
+                }
+
+
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'TV') {
+                    populateTVList();
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                    postLeadSourceData();
+                }
+
+                /*Jason Sun addition for Traffic and Weather Reports*/
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Traffic and Weather Reports') {
+                    populateTrafficWeatherList();
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                    postLeadSourceData();
+
+                }
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Print') {
+                    populatePrintList();
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                    postLeadSourceData();
+
+                }
+
+
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Online Radio') {
+                    populateOnlineRadioList();
+                    otherField.hide();
+                    otherFieldLabel.hide();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            console.log('Showing Other Box');
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                    postLeadSourceData();
+
+                }
+
+
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Referred By') {
+                    populateReferredList();
+                    
+                    $('.otherField label')[0].innerHTML = 'Family';
+                    otherField.show();
+                    otherFieldLabel.show();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'ReedHein Employee') {
+                            $('.otherField label')[0].innerHTML = 'ReedHein Employee Name';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else if (leadSource[0][leadSource[0].selectedIndex].text == 'Friend' ||
+                                 leadSource[0][leadSource[0].selectedIndex].text == 'Family') {
+                            $('.otherField label')[0].innerHTML = 'Name';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                    postLeadSourceData();
+                }
+
+
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Dave Ramsey') {
+                    populateDaveRamseyList();
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                    postLeadSourceData();
+                }
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'The Blaze') {
+                    populateTheBlazeList();
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            console.log("Showing Other Box - Blaze");
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+                            console.log('Hiding Other Box - Blaze');
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                    postLeadSourceData();
+                }
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Event (Trade Show/Expo)') {
+                    console.log("Event Trade Show/Expo Selected");
+                    populateEventList();
+
+
+                    if (state[0][state[0].selectedIndex].text == '' || state[0][state[0].selectedIndex].text == '-None-') {
+                        otherField.show();
+                        otherFieldLabel.show();
+                        return;
+                    }
+
+                    if (leadSource[0].length == 1) {
+                        otherField.show();
+                        otherFieldLabel.show();
+                        return;
+                    }
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            console.log("Showing Other Box - Event Trade Show/Expo");
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+                            console.log("Hiding Other Box - Event Trade Show/Expo");
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                    postLeadSourceData();
+                }
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Other') {
+                    $('.otherField label')[0].innerHTML = 'Other *';
+                    otherFieldLabel.show();
+	                otherField.show();
+                }
+
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Email') {
+                    prepLeadSourceData()
+
+	                var replacementOptions = leadDetailOptions['Email'];
+
+	                for (i = 0; i < replacementOptions.length; i++) {
+	                    var option = document.createElement('option');
+	                    option.text = replacementOptions[i];
+	                    option.value = replacementOptions[i];
+	                    leadSource[0].add(option);
+	                }
+	                otherFieldLabel.hide();
+	                otherField.hide();
+
+	                leadSource[0].addEventListener('change', function() {
+	                    if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+	                });
+                    postLeadSourceData();
+                }
+
+                if (leadSource[0].length == 0) {
+                    var option = document.createElement('option');
+                    option.text = "Other";
+                    option.value = "Other";
+                    leadSource[0].add(option);
+                    return;
+                } else if (leadSource[0].lastChild.text != "Other") {
+                    var option = document.createElement('option');
+                    option.text = "Other";
+                    option.value = "Other";
+                    leadSource[0].add(option);
+                }
+            });
+
+
+            /* Detects change on the radio picklist, popluates the 'Choose an Option' picklist iff hearAboutUs is set to radio */
+            state[0].addEventListener("change", function() {
+                if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Radio') {
+                    console.log("Radio Selected - 2");
+                    populateRadioSelect();
+
+                    if (radioSelect[0].length == 1) {
+                        otherField.show();
+                        otherFieldLabel.show();
+                        return;
+                    }
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+                    console.log( leadSource );
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            console.log('Showing Other Box - Radio');
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+                            console.log("Hiding Other Box - StateChange - Radio");
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                }
+                else if (hearAboutUs[0][hearAboutUs[0].selectedIndex].text == 'Event (Trade Show/Expo)') {
+                    console.log('Change in State -- Event Trade Show/Expo Selected');
+
+                    populateEventList();
+
+                    if (leadSource[0].length == 1) {
+                        otherField.show();
+                        otherFieldLabel.show();
+                        return;
+                    }
+
+                    otherField.hide();
+                    otherFieldLabel.hide();
+
+                    leadSource[0].addEventListener('change', function() {
+                        if (leadSource[0][leadSource[0].selectedIndex].text == 'Other') {
+                            $('.otherField label')[0].innerHTML = 'Other *';
+                            console.log('Showing Other Box - StateChange - Trade Show/Expo');
+                            otherField.show();
+                            otherFieldLabel.show();
+                        }
+                        else {
+                            console.log("Hiding Other Box - Trade Show/Expo");
+	                        otherFieldLabel.hide();
+	                        otherField.hide();
+                        }
+                    });
+                }
+                else {
+                    console.log("Hiding Other Box - StateChange - MISC");
+                    otherField.hide();
+                    otherFieldLabel.hide();
+                    return;
+                }
+            });
+            
+            function customRequiredParser(){
+                $('#reqFeedbackWarning').remove();
+                $('#emailFeedbackWarning').remove();
+                var parsed = true;
+                var fields = $(".required, .radioStation, .leadSourceDetail, .otherField").find("select, textarea, input");
+                
+                $(".required , .radioStation, .leadSourceDetail, .otherField").removeClass("error");
+                
+                
+                $.each(fields, function(i, field){
+                    //for some reason the how did you heard about us deafaults to having a value all attempts i've made to remove it have failed
+                    if ((!field.value)&&($(field).is(':visible'))){
+                        $(field).parent().addClass("error");
+                        $('.submit').prepend('<p class="error" id="reqFeedbackWarning">You are missing required fields.</p>');
+                        parsed = false;
+                    }
+                });
+                
+                var email = $('.email input');
+                if(email.length >0){
+                    var valid = isValidEmailAddress( email[0].value );
+                    if(!valid){
+                        $('.submit').prepend('<p class="error" id="emailFeedbackWarning">Your email is not properly formatted.</p>');
+                        $(email).parent().addClass("error");
+                        parsed = false;
+                    }
+
+                }
+                
+                return parsed;
+            }
+            
+            $('#pardot-form').submit(function(e) {
+                var parsed = customRequiredParser();
+                if(!parsed){
+                    e.preventDefault();
+                }
+                ///    var ls = $('.leadSource').val;
+                ///    $('.leadSource').replaceWith('<input type="text" name="124831_7277pi_124831_7277" id="124831_7277pi_124831_7277" value="123" class="text" size="30" maxlength="65535" onchange="">');
+                ///    $('.leadSourceDetail').value = ls;
+            });
+            
+            function prepLeadSourceData(){
+                leadSource.empty()
+                var option = document.createElement('option');
+                option.text = "";
+                option.value = "";
+                leadSource[0].add(option);
+            }
+            
+            function postLeadSourceData(){
+                //leadSource[0].options[0].setAttribute('selected','selected');
+            }
+            
+            // standard function for testing strings against email formatting
+            function isValidEmailAddress(emailAddress) {
+                var pattern = /^([a-z\d!#$%&'*+\-\/=?^_`{|}~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]+(\.[a-z\d!#$%&'*+\-\/=?^_`{|}~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]+)*|"((([ \t]*\r\n)?[ \t]+)?([\x01-\x08\x0b\x0c\x0e-\x1f\x7f\x21\x23-\x5b\x5d-\x7e\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]|\\[\x01-\x09\x0b\x0c\x0d-\x7f\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))*(([ \t]*\r\n)?[ \t]+)?")@(([a-z\d\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]|[a-z\d\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF][a-z\d\-._~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]*[a-z\d\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])\.)+([a-z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]|[a-z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF][a-z\d\-._~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]*[a-z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])\.?$/i;
+                return pattern.test(emailAddress);
+            };
+            
+            function convertInputToSelect( src ){
+                var target = $(src)[0];
+                var name = target.name;
+                var id = target.id;
+                
+                
+                var str = "<select name='"+name+"' id='"+id+"'></select>";
+                $(target).replaceWith( str );
+            }
+            
+
+            $( document ).ready(function() {
+                hearAboutUs[0].options[0].setAttribute('selected','selected');
+            });
+	    </script>
+	</body>
+</html>
