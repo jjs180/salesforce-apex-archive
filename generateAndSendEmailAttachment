@@ -1,0 +1,60 @@
+@future(callout=true)
+    private static void generateAndSendInvoice(Set<Id> ordersForInvoicingIds){
+        List<Order> ordersForInvoicingList = [SELECT OrderNumber, Invoice_Contact__c FROM Order WHERE Id IN:ordersForInvoicingIds];
+        
+        for(Order o: ordersForInvoicingList){
+			// Attach Invoice PDF to quote
+            PageReference pr = Page.OrderInvoice;
+            pr.getParameters().put('Id', o.Id);
+            Blob pdf;
+            if (Test.isRunningTest()) {
+            	pdf = Blob.valueOf('Blobbity blob');
+            } 
+            else {
+          		pdf = pr.getContent();
+            }
+            Attachment att = new Attachment();
+           	att.ParentId = o.Id;
+            att.Name = 'Invoice Order #' + o.OrderNumber + '.pdf';
+            att.Body = pdf;
+            			
+            		
+          	insert att;  //not bulkified on-purpose as only single operations are expected                                 
+            		
+      		//TO-DO: Which email template do we use? 
+			List<EmailTemplate> templateList = new List<EmailTemplate>( [SELECT Id, Name, isActive 
+                                                                   		FROM EmailTemplate 
+                                                                   		WHERE Name = 'Orders: Send Invoice Test'] );
+            	
+			//TO-DO: Add error handling in case no template is found
+			
+            
+        	Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+			mail.setReplyTo('jsun@relationedge.com');
+			mail.setSenderDisplayName('NEWhere Invoicing');
+	        mail.saveAsActivity = true;
+            mail.setTargetObjectId(o.Invoice_Contact__c);                                       
+	        mail.setTemplateId(templateList[0].Id);                
+	        mail.setWhatId(o.Id);    
+            
+			// Create the email attachment
+			Messaging.EmailFileAttachment efa = new Messaging.EmailFileAttachment();
+			efa.setFileName(att.Name);
+			efa.setBody(att.Body);                        
+	        mail.setFileAttachments(new Messaging.EmailFileAttachment[]{ efa });
+
+            List<Messaging.SingleEmailMessage> emailList = new List<Messaging.SingleEmailMessage>();            	
+            emailList.add(mail);
+                    
+            try{                     
+				Messaging.sendEmail(emailList);
+            }
+            catch(Exception e){
+                //TO-DO: Add error handling in case there is an error
+                //Maybe an error email?
+               	system.debug('Error occurred sending Invoice email---' + e.getMessage());
+            }
+        }
+   
+    }
+ 
