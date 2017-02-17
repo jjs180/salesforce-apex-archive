@@ -1,0 +1,95 @@
+/*
+* ─────────────────────────────────────────────────────────────────────────────────────────────────
+* REST Service for the Webhook POST call
+* covered by CloudPaymentsWebhookTest
+* ─────────────────────────────────────────────────────────────────────────────────────────────────
+* Initial implementation
+* @author       Cloud Mine Consulting (www.cloudmineconsulting.com)
+* @created      2017-02-01
+* ─────────────────────────────────────────────────────────────────────────────────────────────────
+* Changes
+*
+*
+* ─────────────────────────────────────────────────────────────────────────────────────────────────
+*/
+@RestResource(urlMapping='/CloudPaymentsWebhook')
+global class CloudPaymentsWebhook {
+
+    @HttpGet
+    global static void doGet()
+    {
+    }
+    
+    @HttpPost
+    global static void doPost()
+    {
+        SendEmail(RestContext.request.params);
+        
+        RestContext.response.statusCode = 200;
+        RestContext.response.addHeader('Content-Type', 'application/json');
+        RestContext.response.responseBody = Blob.valueOf('{"code":0}');
+    }
+    
+    private static void SendEmail(Map<String, String> params) {
+        
+        string action = RestContext.request.params.get('Action');
+        string subject;
+        string body;
+        if (action == 'Failure') {
+            subject = 'RU Team - Failed Transaction ' + RestContext.request.params.get('Name');
+            body = '';
+            body += 'A transaction ' + RestContext.request.params.get('TransactionId') + ' has been failed due to the following reason: ' ;
+            body += RestContext.request.params.get('Reason') + ', Reason ID - ' + RestContext.request.params.get('ReasonCode') + '<br />';
+            body += 'Please check the details:<br />';
+            body += RestContext.request.params.get('Name') + '<br />';
+            body += 'Account ID: ' + RestContext.request.params.get('AccountId') + '<br />';
+            body += 'Email: ' + RestContext.request.params.get('Email') + '<br />';
+            body += 'Subscription ID (if recurring): ' + RestContext.request.params.get('SubscriptionId') + '<br />';
+            body += 'Amount: ' + RestContext.request.params.get('Amount') + '<br />';
+            DateTime dateT = DateTime.valueOfGMT(RestContext.request.params.get('DateTime'));
+            body += 'Date of payment: ' + dateT.format('MM/dd/yyyy HH:mm', 'Europe/Moscow') + '<br />';
+        }
+        if (action == 'Payment') {
+            subject = 'RU Team - Successful Transaction ' + RestContext.request.params.get('Name');
+            body = '';
+            body += 'A transaction ' + RestContext.request.params.get('TransactionId') + ' has been processed successfully<br />';
+            body += 'Please check the details:<br />';
+            body += RestContext.request.params.get('Name') + '<br />';
+            body += 'Account ID: ' + RestContext.request.params.get('AccountId') + '<br />';
+            body += 'Amount: ' + RestContext.request.params.get('Amount') + '<br />';
+            body += 'Payment for: ' + RestContext.request.params.get('Description') + '<br />';
+            body += 'Status: ' + RestContext.request.params.get('Status') + '<br />';
+            body += 'City: ' + RestContext.request.params.get('IpCity') + '<br />';
+            body += 'Email: ' + RestContext.request.params.get('Email') + '<br />';
+            body += 'Subscription ID (if recurring): ' + RestContext.request.params.get('SubscriptionId') + '<br />';
+            DateTime dateT = DateTime.valueOfGMT(RestContext.request.params.get('DateTime'));
+            body += 'Date of payment: ' + dateT.format('MM/dd/yyyy HH:mm', 'Europe/Moscow') + '<br />';
+        }
+        if (action == 'SubscriptionChanged') {
+            subject = 'RU Team - Cancelled Transaction';
+            body = '';
+            body += 'A client has cancelled the subscription<br />' ;
+            body += 'Please check the details:<br />';
+            body += 'Account ID: ' + RestContext.request.params.get('AccountId') + '<br />';
+            body += 'Email: ' + RestContext.request.params.get('Email') + '<br />';
+            body += 'Amount: ' + RestContext.request.params.get('Amount') + '<br />';
+        }
+        
+        List<CloudPayment_Failure_Email__mdt> metas = [SELECT Email__c FROM CloudPayment_Failure_Email__mdt];
+        String[] emails = new String[]{};
+        for (CloudPayment_Failure_Email__mdt meta : metas) {
+            emails.add(meta.Email__c);
+        }
+        
+        Messaging.reserveSingleEmailCapacity(1);
+        Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+        mail.setToAddresses(emails);
+        mail.setSenderDisplayName('Salesforce');
+        mail.setSubject(subject);
+        mail.setUseSignature(false);
+        mail.setHtmlBody(body);
+        Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mail });
+        
+    }
+    
+}
