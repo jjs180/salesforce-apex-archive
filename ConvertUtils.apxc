@@ -1,0 +1,40 @@
+//Utility to convert a 15 digit case-sensitive Salesforce ID to a 30-digit 128-bit UUID
+
+public class ConvertUtils {
+
+    private static String charString = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    
+    public static string IdToUUID(Id recId) {
+        
+        Map<string, string> charMap = new Map<string, string>();
+        for (integer i = 0; i < 62; i++) {
+            charMap.put(charString.substring(i, i + 1), (string.valueOf(i)).leftPad(2, '0'));
+        }
+        
+        string recordId = ((string)recId).substring(0,15);
+        
+        string result = '';
+        for (integer i = 0; i < 15; i++) {
+            result = result + charMap.get(recordId.substring(i, i + 1));
+        }
+        
+        return '00' + result;
+    }
+    
+    public static Id UUIDToId(string uuid) {
+        
+        Map<string, string> charMap = new Map<string, string>();
+        for (integer i = 0; i < 62; i++) {
+            charMap.put((string.valueOf(i)).leftPad(2, '0'), charString.substring(i, i + 1));
+        }
+        
+        string uid = uuid.substring(2);
+        
+        string result = '';
+        for (integer i = 0; i < 15; i++) {
+            result = result + charMap.get(uid.substring(i * 2, i * 2 + 2));
+        }
+        
+        return result;
+    }
+}
